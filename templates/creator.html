@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Creator{% endblock %}
+
+{% block brand_href %}/creator{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Creator dashboard">
+    <div class="dash" data-animate="fade-up">
+      <div class="dash__top">
+        <div class="dash__title">
+          <h2 class="h2">Creator dashboard</h2>
+          <p class="lead">Logged in as <strong>{{ user_email }}</strong>. Manage events, bookings, and performance.</p>
+        </div>
+
+        <div class="dash__stats" aria-label="Top stats">
+          <div class="stat">
+            <div class="stat__icon" aria-hidden="true">📅</div>
+            <div class="stat__meta">
+              <div class="stat__label">Total events</div>
+              <div class="stat__value">{{ stats.total_events }}</div>
+              <div class="stat__trend">{% if stats.trend.total_events > 0 %}+{% endif %}{{ stats.trend.total_events }}%</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon" aria-hidden="true">🎟️</div>
+            <div class="stat__meta">
+              <div class="stat__label">Total bookings</div>
+              <div class="stat__value">{{ stats.total_bookings }}</div>
+              <div class="stat__trend">{% if stats.trend.total_bookings > 0 %}+{% endif %}{{ stats.trend.total_bookings }}%</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon" aria-hidden="true">₹</div>
+            <div class="stat__meta">
+              <div class="stat__label">Total revenue</div>
+              <div class="stat__value">₹ {{ stats.total_revenue }}</div>
+              <div class="stat__trend">{% if stats.trend.total_revenue > 0 %}+{% endif %}{{ stats.trend.total_revenue }}%</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat__icon" aria-hidden="true">👀</div>
+            <div class="stat__meta">
+              <div class="stat__label">Page views</div>
+              <div class="stat__value">{{ stats.page_views }}</div>
+              <div class="stat__trend">{% if stats.trend.page_views > 0 %}+{% endif %}{{ stats.trend.page_views }}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash__grid">
+        <div class="dash__col dash__col--main">
+          <div class="panel" data-animate="fade-up" data-delay="90">
+            <div class="panel__head">
+              <div class="panel__title">Create event</div>
+              <div class="panel__sub">Publish a new listing customers can book.</div>
+            </div>
+            <form class="auth" method="post" action="/creator/events" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label class="field">
+                  <span class="field__label">Event title</span>
+                  <input class="field__input" type="text" name="title" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Date</span>
+                  <input class="field__input" type="date" name="event_date" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Venue</span>
+                  <input class="field__input" type="text" name="venue" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Thumbnail</span>
+                  <input class="field__input" type="file" name="thumbnail" accept="image/png,image/jpeg,image/webp">
+                </label>
+                <label class="field field--full">
+                  <span class="field__label">Description</span>
+                  <textarea class="field__input" name="description" rows="4" required></textarea>
+                </label>
+              </div>
+              <div class="panel__actions">
+                <button class="btn btn--primary" type="submit">Create event</button>
+                <a class="btn btn--ghost" href="/events" style="display:none">Preview public</a>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel" data-animate="fade-up" data-delay="140" style="margin-top:16px">
+            <div class="panel__head">
+              <div>
+                <div class="panel__title">Your events</div>
+                <div class="panel__sub">Edit, preview, and manage your listings.</div>
+              </div>
+            </div>
+
+            {% set today_str = today.strftime('%Y-%m-%d') %}
+
+            {% if events and events|length > 0 %}
+              <div class="event-list">
+                {% for e in events %}
+                  {% set status = 'Upcoming' %}
+                  {% if e['is_archived'] %}
+                    {% set status = 'Archived' %}
+                  {% elif e['event_date'] < today_str %}
+                    {% set status = 'Expired' %}
+                  {% elif e['event_date'] == today_str %}
+                    {% set status = 'Live' %}
+                  {% endif %}
+
+                  <article class="event" data-animate="fade-up">
+                    <div class="event__main">
+                      <div class="event__title-row">
+                        <div class="event__title">{{ e['title'] }}</div>
+                        <span class="badge badge--{{ status|lower }}">{{ status }}</span>
+                      </div>
+                      <div class="event__meta">
+                        <span>{{ e['event_date'] }}</span>
+                        <span class="dot" aria-hidden="true"></span>
+                        <span>{{ e['venue'] }}</span>
+                      </div>
+                      <div class="event__kpis">
+                        <div class="kpi"><span class="kpi__label">Bookings</span><span class="kpi__value">{{ e['booking_count'] }}</span></div>
+                        <div class="kpi"><span class="kpi__label">Revenue</span><span class="kpi__value">₹ {{ e['revenue'] }}</span></div>
+                        <div class="kpi"><span class="kpi__label">Views</span><span class="kpi__value">{{ e['views'] }}</span></div>
+                      </div>
+                    </div>
+
+                    <div class="event__actions">
+                      <a class="mini-btn" href="/creator/events/{{ e['id'] }}/edit">Edit</a>
+                      <a class="mini-btn" href="/creator/events/{{ e['id'] }}/stats">View stats</a>
+                      <a class="mini-btn" href="/events/{{ e['id'] }}">Preview</a>
+                      <form method="post" action="/creator/events/{{ e['id'] }}/archive">
+                        <button class="mini-btn" type="submit">{% if e['is_archived'] %}Unarchive{% else %}Archive{% endif %}</button>
+                      </form>
+                      <form method="post" action="/creator/events/{{ e['id'] }}/delete" onsubmit="return confirm('Delete this event? This will also remove its bookings.');">
+                        <button class="mini-btn" type="submit">Delete</button>
+                      </form>
+                    </div>
+                  </article>
+                {% endfor %}
+              </div>
+
+              {% if pagination and pagination.pages > 1 %}
+                <nav class="pagination" aria-label="Pagination">
+                  <a class="pagination__link{% if not pagination.has_prev %} is-disabled{% endif %}" {% if pagination.has_prev %}href="?page={{ pagination.prev_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Previous</a>
+                  <div class="pagination__pages" role="list">
+                    {% for n in pagination.page_numbers %}
+                      <a class="pagination__page{% if n == pagination.page %} is-active{% endif %}" role="listitem" href="?page={{ n }}&per_page={{ pagination.per_page }}" {% if n == pagination.page %}aria-current="page"{% endif %}>{{ n }}</a>
+                    {% endfor %}
+                  </div>
+                  <a class="pagination__link{% if not pagination.has_next %} is-disabled{% endif %}" {% if pagination.has_next %}href="?page={{ pagination.next_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Next</a>
+                </nav>
+              {% endif %}
+            {% else %}
+              <div class="empty" aria-label="Empty state">
+                <div class="empty__icon" aria-hidden="true">✨</div>
+                <div class="empty__title">No events yet</div>
+                <div class="empty__sub">Create your first event to start collecting bookings.</div>
+                <button class="btn btn--primary" type="button" onclick="document.querySelector('input[name=title]').focus()">Create your first event</button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="dash__col dash__col--side">
+          <div class="panel" data-animate="fade-up" data-delay="110">
+            <div class="panel__head">
+              <div class="panel__title">Recent activity</div>
+              <div class="panel__sub">Latest signals across your events.</div>
+            </div>
+            <div class="activity" aria-label="Activity feed">
+              {% for a in activity %}
+                <div class="activity__item">
+                  <div class="activity__icon" aria-hidden="true">{{ a.icon }}</div>
+                  <div class="activity__body">
+                    <div class="activity__text">{{ a.text }}</div>
+                    <div class="activity__time">{{ a.ts }}</div>
+                  </div>
+                </div>
+              {% else %}
+                <div class="panel__empty">No activity yet.</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="panel" data-animate="fade-up" data-delay="160" style="margin-top:16px">
+            <div class="panel__head">
+              <div class="panel__title">Upcoming</div>
+              <div class="panel__sub">Today • This week • This month</div>
+            </div>
+
+            <div class="timeline" aria-label="Upcoming timeline">
+              <div class="timeline__group">
+                <div class="timeline__label">Today</div>
+                {% for e in upcoming.today %}
+                  <a class="timeline__item" href="/creator/events/{{ e['id'] }}/stats">
+                    <span class="timeline__dot" aria-hidden="true"></span>
+                    <span class="timeline__main">
+                      <span class="timeline__title">{{ e['title'] }}</span>
+                      <span class="timeline__meta">{{ e['venue'] }}</span>
+                    </span>
+                  </a>
+                {% else %}
+                  <div class="timeline__empty">No events today.</div>
+                {% endfor %}
+              </div>
+
+              <div class="timeline__group">
+                <div class="timeline__label">This week</div>
+                {% for e in upcoming.week %}
+                  <a class="timeline__item" href="/creator/events/{{ e['id'] }}/stats">
+                    <span class="timeline__dot" aria-hidden="true"></span>
+                    <span class="timeline__main">
+                      <span class="timeline__title">{{ e['event_date'] }} — {{ e['title'] }}</span>
+                      <span class="timeline__meta">{{ e['venue'] }}</span>
+                    </span>
+                  </a>
+                {% else %}
+                  <div class="timeline__empty">No events this week.</div>
+                {% endfor %}
+              </div>
+
+              <div class="timeline__group">
+                <div class="timeline__label">This month</div>
+                {% for e in upcoming.month %}
+                  <a class="timeline__item" href="/creator/events/{{ e['id'] }}/stats">
+                    <span class="timeline__dot" aria-hidden="true"></span>
+                    <span class="timeline__main">
+                      <span class="timeline__title">{{ e['event_date'] }} — {{ e['title'] }}</span>
+                      <span class="timeline__meta">{{ e['venue'] }}</span>
+                    </span>
+                  </a>
+                {% else %}
+                  <div class="timeline__empty">No more events this month.</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" data-animate="fade-up" data-delay="210" style="margin-top:16px">
+            <div class="panel__head">
+              <div class="panel__title">Preview & share</div>
+              <div class="panel__sub">Share your public booking page.</div>
+            </div>
+            <div class="share">
+              <div class="share__row">
+                <div class="share__label">Public booking page</div>
+                <div class="share__value" data-share-url>{{ public_booking_url }}</div>
+              </div>
+              <div class="panel__actions">
+                <button class="mini-btn" type="button" data-copy-link>Copy link</button>
+                <a class="mini-btn" href="/customer">Preview as customer</a>
+              </div>
+              <div class="share__hint" data-copy-hint aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const btn = document.querySelector('[data-copy-link]');
+      const urlEl = document.querySelector('[data-share-url]');
+      const hint = document.querySelector('[data-copy-hint]');
+      if (!btn || !urlEl) return;
+
+      const setHint = (t) => {
+        if (!hint) return;
+        hint.textContent = t;
+        if (t) setTimeout(() => { if (hint.textContent === t) hint.textContent = ''; }, 1400);
+      };
+
+      btn.addEventListener('click', async () => {
+        const text = (urlEl.textContent || '').trim();
+        try {
+          await navigator.clipboard.writeText(text);
+          setHint('Copied');
+        } catch {
+          setHint('Copy failed');
+        }
+      });
+    })();
+  </script>
+{% endblock %}

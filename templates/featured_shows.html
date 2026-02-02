@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Featured shows{% endblock %}
+
+{% block content %}
+  <section class="section section--featured" aria-label="Featured shows">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Featured shows</h2>
+      <p class="lead">Special events with celebrity drops, brand collaborations, and one-night-only stages.</p>
+    </div>
+
+    <div class="carousel" data-carousel>
+      <button class="carousel__btn" data-carousel-prev aria-label="Previous">‹</button>
+      <div class="carousel__track" data-carousel-track>
+        <article class="talent" data-animate="fade-up">
+          <div class="talent__frame">
+            <div class="talent__video" data-poster="1">
+              <div class="talent__play" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div class="talent__info">
+            <div class="talent__name">Brand Spotlight Night</div>
+            <div class="talent__meta">Featured by a premium partner • Curated lineup</div>
+          </div>
+        </article>
+
+        <article class="talent" data-animate="fade-up" data-delay="120">
+          <div class="talent__frame">
+            <div class="talent__video" data-poster="2">
+              <div class="talent__play" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div class="talent__info">
+            <div class="talent__name">Celebrity Guest Set</div>
+            <div class="talent__meta">Surprise headliner • Limited seats</div>
+          </div>
+        </article>
+
+        <article class="talent" data-animate="fade-up" data-delay="220">
+          <div class="talent__frame">
+            <div class="talent__video" data-poster="3">
+              <div class="talent__play" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div class="talent__info">
+            <div class="talent__name">Festival Feature Stage</div>
+            <div class="talent__meta">Creators + DJs • Brand collab</div>
+          </div>
+        </article>
+      </div>
+      <button class="carousel__btn" data-carousel-next aria-label="Next">›</button>
+    </div>
+  </section>
+{% endblock %}

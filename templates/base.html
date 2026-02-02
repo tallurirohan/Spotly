@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Spotly{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="bg">
+    <div class="bg__grid"></div>
+    <div class="bg__glow bg__glow--a"></div>
+    <div class="bg__glow bg__glow--b"></div>
+    <div class="bg__noise"></div>
+  </div>
+
+  <header class="top">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="{% block brand_href %}/{% endblock %}" aria-label="Spotly">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">Spotly</span>
+      </a>
+
+      <div class="nav__links">
+        {% block nav_links %}
+          {% if user %}
+            {% if user.role == 'audience' %}
+              <a href="/customer" class="nav__link">Customer</a>
+              <a href="/bookings" class="nav__link">Bookings</a>
+            {% elif user.role == 'creator' %}
+              <a href="/creator" class="nav__link">Creator</a>
+            {% endif %}
+          {% endif %}
+          <a href="/featured-shows" class="nav__link">Featured shows</a>
+          <a href="/live-shows" class="nav__link">Live shows</a>
+          <a href="/testimonials" class="nav__link">Testimonials</a>
+        {% endblock %}
+      </div>
+
+      <div class="nav__cta">
+        {% block nav_cta %}
+          {% if user %}
+            <a class="btn btn--ghost" href="{% if user.role == 'creator' %}/creator{% else %}/customer{% endif %}">Dashboard</a>
+            <a class="btn btn--primary" href="/logout">Logout</a>
+          {% else %}
+            <a class="btn btn--ghost" href="/login">Login</a>
+            <a class="btn btn--primary" href="/signup">Sign up</a>
+          {% endif %}
+        {% endblock %}
+      </div>
+    </nav>
+  </header>
+
+  <main class="main" {% block main_attrs %}{% endblock %}>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

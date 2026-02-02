@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Event stats{% endblock %}
+
+{% block brand_href %}/creator{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Event stats">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Event stats</h2>
+      <p class="lead"><strong>{{ event['title'] }}</strong> • {{ event['event_date'] }} • {{ event['venue'] }}</p>
+    </div>
+
+    <div class="dash" data-animate="fade-up" data-delay="120">
+      <div class="dash__stats">
+        <div class="stat">
+          <div class="stat__icon" aria-hidden="true">🎟️</div>
+          <div class="stat__meta">
+            <div class="stat__label">Bookings</div>
+            <div class="stat__value">{{ totals['booking_count'] }}</div>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="stat__icon" aria-hidden="true">₹</div>
+          <div class="stat__meta">
+            <div class="stat__label">Revenue</div>
+            <div class="stat__value">₹ {{ totals['revenue'] }}</div>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="stat__icon" aria-hidden="true">👀</div>
+          <div class="stat__meta">
+            <div class="stat__label">Page views</div>
+            <div class="stat__value">{{ event['views'] }}</div>
+          </div>
+        </div>
+        <div class="stat">
+          <div class="stat__icon" aria-hidden="true">🔗</div>
+          <div class="stat__meta">
+            <div class="stat__label">Public URL</div>
+            <div class="stat__value" style="font-size:12px;line-height:1.4;word-break:break-word">{{ public_url }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash__panel">
+        <div class="panel__head">
+          <div class="panel__title">Recent bookers</div>
+          <div class="panel__actions">
+            <a class="mini-btn" href="{{ public_url }}">Preview</a>
+            <a class="mini-btn" href="/creator">Back</a>
+          </div>
+        </div>
+
+        <div class="table" role="table" aria-label="Bookers">
+          <div class="table__row table__row--head" role="row">
+            <div role="columnheader">User</div>
+            <div role="columnheader">Status</div>
+            <div role="columnheader">Booked at</div>
+          </div>
+          {% for b in bookers %}
+          <div class="table__row" role="row">
+            <div role="cell">{{ b['customer_email'] }}</div>
+            <div role="cell">{{ b['status'] }}</div>
+            <div role="cell">{{ b['created_at'] }}</div>
+          </div>
+          {% else %}
+          <div class="panel__empty">No bookings yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

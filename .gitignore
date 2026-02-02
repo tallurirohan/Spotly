@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+spotly.db
+static/uploads/
+.env
+.venv/
+venv/

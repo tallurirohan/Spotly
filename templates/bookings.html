@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Bookings{% endblock %}
+
+{% block brand_href %}/customer{% endblock %}
+
+{% block content %}
+    <section class="section" aria-label="Bookings">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Your bookings</h2>
+        <p class="lead">Cancel rules: 3+ days = 5% fee, 2 days = 10%, 1 day = 15%, same day = no cancellation.</p>
+      </div>
+
+      <div class="tickets">
+        {% for b in bookings %}
+        <article class="ticket" data-animate="fade-up">
+          <div class="ticket__top">
+            <div class="ticket__title">{{ b['event_title'] }}</div>
+            <div class="ticket__chip">{{ b['event_date'] }}</div>
+          </div>
+          <div class="ticket__mid">
+            <div class="ticket__meta">{{ b['event_venue'] }}</div>
+            <div class="ticket__price">₹ {{ b['amount'] }}</div>
+          </div>
+          <div class="ticket__bottom" style="align-items:flex-start;gap:10px">
+            <div class="ticket__fine">
+              Status: <strong>{{ b['status'] }}</strong>
+              {% if b['status'] == 'canceled' %}
+                <br>Refund: <strong>₹ {{ b['refund_amount'] or 0 }}</strong>
+                {% if b['refund_fee_percent'] is not none %}
+                  <br>Fee: <strong>{{ b['refund_fee_percent'] }}%</strong>
+                {% endif %}
+              {% endif %}
+            </div>
+
+            {% if b['status'] == 'pending_payment' %}
+              <a class="mini-btn" href="/payment/{{ b['id'] }}">Pay now</a>
+            {% elif b['status'] == 'booked' %}
+              <a class="mini-btn" href="/booking/{{ b['id'] }}/confirmation">Details</a>
+              <form method="post" action="/bookings/{{ b['id'] }}/cancel">
+                <button class="mini-btn" type="submit">Cancel</button>
+              </form>
+            {% elif b['status'] == 'paid' %}
+              <form method="post" action="/bookings/{{ b['id'] }}/cancel">
+                <button class="mini-btn" type="submit">Cancel</button>
+              </form>
+            {% endif %}
+          </div>
+        </article>
+        {% else %}
+        <div class="lead" data-animate="fade-up">No bookings yet. Book an event from the customer page.</div>
+        {% endfor %}
+      </div>
+
+      {% if pagination and pagination.pages > 1 %}
+      <nav class="pagination" aria-label="Pagination">
+        <a class="pagination__link{% if not pagination.has_prev %} is-disabled{% endif %}" {% if pagination.has_prev %}href="?page={{ pagination.prev_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Previous</a>
+        <div class="pagination__pages" role="list">
+          {% for n in pagination.page_numbers %}
+            <a class="pagination__page{% if n == pagination.page %} is-active{% endif %}" role="listitem" href="?page={{ n }}&per_page={{ pagination.per_page }}" {% if n == pagination.page %}aria-current="page"{% endif %}>{{ n }}</a>
+          {% endfor %}
+        </div>
+        <a class="pagination__link{% if not pagination.has_next %} is-disabled{% endif %}" {% if pagination.has_next %}href="?page={{ pagination.next_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Next</a>
+      </nav>
+      {% endif %}
+    </section>
+{% endblock %}

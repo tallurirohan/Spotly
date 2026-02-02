@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Booking confirmed{% endblock %}
+
+{% block brand_href %}/customer{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Booking confirmation">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Booking confirmed</h2>
+      <p class="lead">Your booking for <strong>{{ booking['event_title'] }}</strong> is confirmed.</p>
+    </div>
+
+    <div class="auth-shell" data-animate="fade-up" data-delay="120">
+      <div class="lead" style="margin-bottom:10px">
+        Date: <strong>{{ booking['event_date'] }}</strong><br>
+        Venue: <strong>{{ booking['event_venue'] }}</strong><br>
+        Amount: <strong>₹ {{ booking['amount'] }}</strong><br>
+        Status: <strong>{{ booking['status'] }}</strong>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn--ghost" href="/customer">Back to events</a>
+        <a class="btn btn--primary" href="/bookings">View bookings</a>
+      </div>
+      <div class="modal__fine" style="margin-top:10px">Payment is not required (mock booking flow).</div>
+    </div>
+  </section>
+{% endblock %}

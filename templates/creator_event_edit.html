@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Edit event{% endblock %}
+
+{% block brand_href %}/creator{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Edit event">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Edit event</h2>
+      <p class="lead">Update event details and thumbnail.</p>
+    </div>
+
+    <div class="auth-shell" data-animate="fade-up" data-delay="120">
+      {% if request.args.get('error') == 'missing' %}
+        <div class="modal__fine">Please fill all required fields.</div>
+      {% elif request.args.get('error') == 'thumb' %}
+        <div class="modal__fine">Thumbnail must be png/jpg/webp.</div>
+      {% endif %}
+
+      <form class="auth" method="post" action="/creator/events/{{ event['id'] }}/edit" enctype="multipart/form-data">
+        <label class="field">
+          <span class="field__label">Event title</span>
+          <input class="field__input" type="text" name="title" value="{{ event['title'] }}" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Date</span>
+          <input class="field__input" type="date" name="event_date" value="{{ event['event_date'] }}" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Venue</span>
+          <input class="field__input" type="text" name="venue" value="{{ event['venue'] }}" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Description</span>
+          <textarea class="field__input" name="description" rows="4" required>{{ event['description'] }}</textarea>
+        </label>
+        <label class="field">
+          <span class="field__label">Thumbnail (optional)</span>
+          <input class="field__input" type="file" name="thumbnail" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn--primary" type="submit">Save changes</button>
+          <a class="btn btn--ghost" href="/creator">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

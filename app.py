@@ -1,0 +1,910 @@
+import os
+import sqlite3
+import uuid
+from datetime import date, datetime
+from math import ceil
+
+from flask import Flask, abort, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+
+app = Flask(__name__)
+app.secret_key = "dev"
+
+UPLOAD_DIR = os.path.join(app.root_path, "static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _db():
+    conn = sqlite3.connect("spotly.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _init_db():
+    with _db() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              email TEXT NOT NULL UNIQUE,
+              password_hash TEXT NOT NULL,
+              role TEXT NOT NULL,
+              created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS events (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              creator_email TEXT NOT NULL,
+              title TEXT NOT NULL,
+              event_date TEXT NOT NULL,
+              venue TEXT NOT NULL,
+              description TEXT NOT NULL,
+              thumbnail_path TEXT,
+              views INTEGER NOT NULL DEFAULT 0,
+              is_archived INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+
+        try:
+            conn.execute("ALTER TABLE events ADD COLUMN views INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute(
+                "ALTER TABLE events ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0"
+            )
+        except sqlite3.OperationalError:
+            pass
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bookings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_email TEXT NOT NULL,
+              event_id INTEGER NOT NULL,
+              amount INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              booking_date TEXT NOT NULL DEFAULT (datetime('now')),
+              customer_id INTEGER,
+              paid_at TEXT,
+              canceled_at TEXT,
+              refund_amount INTEGER,
+              refund_fee_percent INTEGER,
+              FOREIGN KEY(event_id) REFERENCES events(id)
+            )
+            """
+        )
+
+        try:
+            conn.execute(
+                "ALTER TABLE bookings ADD COLUMN booking_date TEXT NOT NULL DEFAULT (datetime('now'))"
+            )
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE bookings ADD COLUMN customer_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_unique_active
+            ON bookings(customer_email, event_id)
+            WHERE status != 'canceled'
+            """
+        )
+
+
+_init_db()
+
+@app.get("/")
+def index():
+    return render_template("index.html", user=_current_user())
+
+
+def _current_user():
+    email = session.get("user_email")
+    role = session.get("user_role")
+    if not email or role not in ("audience", "creator"):
+        return None
+    return {"email": email, "role": role}
+
+
+@app.context_processor
+def _inject_user():
+    return {"user": _current_user()}
+
+
+def _require_login():
+    user = _current_user()
+    if not user:
+        return redirect(url_for("login_page"))
+    return user
+
+
+def _require_role(expected_role: str):
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    if user["role"] != expected_role:
+        abort(403)
+    return user
+
+
+def _get_page_args(default_per_page: int = 6) -> tuple[int, int]:
+    raw_page = request.args.get("page")
+    raw_per_page = request.args.get("per_page")
+
+    try:
+        page = int(raw_page) if raw_page is not None else 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(raw_per_page) if raw_per_page is not None else default_per_page
+    except ValueError:
+        per_page = default_per_page
+
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = default_per_page
+    if per_page > 24:
+        per_page = 24
+
+    return page, per_page
+
+
+def _pagination_model(page: int, per_page: int, total: int) -> dict:
+    pages = max(1, int(ceil(total / per_page)))
+    if page > pages:
+        page = pages
+
+    window = 2
+    start = max(1, page - window)
+    end = min(pages, page + window)
+    page_numbers = list(range(start, end + 1))
+
+    return {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": pages,
+        "has_prev": page > 1,
+        "has_next": page < pages,
+        "prev_page": page - 1,
+        "next_page": page + 1,
+        "page_numbers": page_numbers,
+        "offset": (page - 1) * per_page,
+    }
+
+
+@app.get("/signup")
+def signup_page():
+    return render_template("signup.html")
+
+
+@app.get("/signup/audience")
+def signup_audience_page():
+    role = "audience"
+    error = request.args.get("error")
+    return render_template("signup_audience.html", role=role, error=error)
+
+
+@app.get("/signup/creator")
+def signup_creator_page():
+    role = "creator"
+    error = request.args.get("error")
+    return render_template("signup_creator.html", role=role, error=error)
+
+
+@app.get("/login")
+def login_page():
+    role = (request.args.get("role") or "audience").strip().lower()
+    if role not in ("audience", "creator"):
+        role = "audience"
+    error = request.args.get("error")
+    return render_template("login.html", role=role, error=error)
+
+
+@app.get("/featured-shows")
+def featured_shows_page():
+    return render_template("featured_shows.html", user=_current_user())
+
+
+@app.get("/live-shows")
+def live_shows_page():
+    return render_template("live_shows.html", user=_current_user())
+
+
+@app.get("/testimonials")
+def testimonials_page():
+    return render_template("testimonials.html", user=_current_user())
+
+
+@app.get("/creator")
+def creator_dashboard():
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+
+    today = date.today()
+    page, per_page = _get_page_args(default_per_page=6)
+    with _db() as conn:
+        total = (
+            conn.execute(
+                "SELECT COUNT(*) FROM events WHERE creator_email = ?",
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        p = _pagination_model(page, per_page, total)
+
+        stats_total_events = (
+            conn.execute(
+                "SELECT COUNT(*) FROM events WHERE creator_email = ?",
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        stats_page_views = (
+            conn.execute(
+                "SELECT COALESCE(SUM(views),0) FROM events WHERE creator_email = ?",
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        stats_total_bookings = (
+            conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM bookings b
+                JOIN events e ON e.id = b.event_id
+                WHERE e.creator_email = ? AND b.status != 'canceled'
+                """,
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        stats_total_revenue = (
+            conn.execute(
+                """
+                SELECT COALESCE(SUM(b.amount),0)
+                FROM bookings b
+                JOIN events e ON e.id = b.event_id
+                WHERE e.creator_email = ? AND b.status != 'canceled'
+                """,
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+
+        events = conn.execute(
+            """
+            SELECT
+              e.*,
+              COALESCE(SUM(CASE WHEN b.status != 'canceled' THEN 1 ELSE 0 END),0) AS booking_count,
+              COALESCE(SUM(CASE WHEN b.status != 'canceled' THEN b.amount ELSE 0 END),0) AS revenue
+            FROM events e
+            LEFT JOIN bookings b ON b.event_id = e.id
+            WHERE e.creator_email = ?
+            GROUP BY e.id
+            ORDER BY e.event_date ASC
+            LIMIT ? OFFSET ?
+            """,
+            (user["email"], p["per_page"], p["offset"]),
+        ).fetchall()
+
+        recent_bookings = conn.execute(
+            """
+            SELECT
+              b.created_at as ts,
+              e.title as title,
+              COUNT(*) as cnt
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE e.creator_email = ? AND b.status != 'canceled'
+            GROUP BY date(b.created_at), e.id
+            ORDER BY b.created_at DESC
+            LIMIT 6
+            """,
+            (user["email"],),
+        ).fetchall()
+        recent_events = conn.execute(
+            """
+            SELECT created_at as ts, title as title
+            FROM events
+            WHERE creator_email = ?
+            ORDER BY created_at DESC
+            LIMIT 6
+            """,
+            (user["email"],),
+        ).fetchall()
+
+        activity = []
+        for r in recent_bookings:
+            activity.append(
+                {
+                    "icon": "🎟️",
+                    "text": f"{r['cnt']} ticket(s) booked for {r['title']}",
+                    "ts": r["ts"],
+                }
+            )
+        for r in recent_events:
+            activity.append(
+                {"icon": "✨", "text": f"Event published: {r['title']}", "ts": r["ts"]}
+            )
+        activity = sorted(activity, key=lambda x: x["ts"], reverse=True)[:8]
+
+        upcoming = conn.execute(
+            """
+            SELECT id, title, event_date, venue
+            FROM events
+            WHERE creator_email = ? AND is_archived = 0
+            ORDER BY event_date ASC
+            LIMIT 6
+            """,
+            (user["email"],),
+        ).fetchall()
+
+        upcoming_today = []
+        upcoming_week = []
+        upcoming_month = []
+        for r in upcoming:
+            try:
+                d = datetime.strptime(r["event_date"], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            delta = (d - today).days
+            if delta < 0:
+                continue
+            if delta == 0:
+                upcoming_today.append(r)
+            elif delta <= 7:
+                upcoming_week.append(r)
+            elif d.year == today.year and d.month == today.month:
+                upcoming_month.append(r)
+    return render_template(
+        "creator.html",
+        user_email=user["email"],
+        events=events,
+        pagination=p,
+        stats={
+            "total_events": int(stats_total_events),
+            "total_bookings": int(stats_total_bookings),
+            "total_revenue": int(stats_total_revenue),
+            "page_views": int(stats_page_views),
+            "trend": {"total_events": 0, "total_bookings": 0, "total_revenue": 0, "page_views": 0},
+        },
+        activity=activity,
+        upcoming={"today": upcoming_today, "week": upcoming_week, "month": upcoming_month},
+        today=today,
+        public_booking_url=request.url_root.rstrip("/") + "/customer",
+    )
+
+
+@app.get("/creator/events/<int:event_id>/edit")
+def creator_edit_event_page(event_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        event = conn.execute(
+            "SELECT * FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        ).fetchone()
+    if not event:
+        abort(404)
+    return render_template("creator_event_edit.html", user_email=user["email"], event=event)
+
+
+@app.post("/creator/events/<int:event_id>/edit")
+def creator_edit_event_submit(event_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+
+    title = (request.form.get("title") or "").strip()
+    event_date = (request.form.get("event_date") or "").strip()
+    venue = (request.form.get("venue") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    if not title or not event_date or not venue or not description:
+        return redirect(url_for("creator_edit_event_page", event_id=event_id) + "?error=missing")
+
+    thumb = request.files.get("thumbnail")
+    thumb_path = None
+    if thumb and (thumb.filename or "").strip():
+        raw = secure_filename(thumb.filename)
+        ext = os.path.splitext(raw)[1].lower()
+        if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+            return redirect(url_for("creator_edit_event_page", event_id=event_id) + "?error=thumb")
+        fname = f"{uuid.uuid4().hex}{ext}"
+        abs_path = os.path.join(UPLOAD_DIR, fname)
+        thumb.save(abs_path)
+        thumb_path = f"uploads/{fname}"
+
+    with _db() as conn:
+        existing = conn.execute(
+            "SELECT * FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        ).fetchone()
+        if not existing:
+            abort(404)
+        if thumb_path:
+            conn.execute(
+                """
+                UPDATE events
+                SET title = ?, event_date = ?, venue = ?, description = ?, thumbnail_path = ?
+                WHERE id = ? AND creator_email = ?
+                """,
+                (title, event_date, venue, description, thumb_path, event_id, user["email"]),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE events
+                SET title = ?, event_date = ?, venue = ?, description = ?
+                WHERE id = ? AND creator_email = ?
+                """,
+                (title, event_date, venue, description, event_id, user["email"]),
+            )
+    return redirect(url_for("creator_dashboard"))
+
+
+@app.post("/creator/events/<int:event_id>/archive")
+def creator_archive_event(event_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT is_archived FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        ).fetchone()
+        if not row:
+            abort(404)
+        next_val = 0 if int(row["is_archived"] or 0) == 1 else 1
+        conn.execute(
+            "UPDATE events SET is_archived = ? WHERE id = ? AND creator_email = ?",
+            (next_val, event_id, user["email"]),
+        )
+    return redirect(url_for("creator_dashboard"))
+
+
+@app.post("/creator/events/<int:event_id>/delete")
+def creator_delete_event(event_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        ok = conn.execute(
+            "SELECT 1 FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        ).fetchone()
+        if not ok:
+            abort(404)
+        conn.execute("DELETE FROM bookings WHERE event_id = ?", (event_id,))
+        conn.execute(
+            "DELETE FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        )
+    return redirect(url_for("creator_dashboard"))
+
+
+@app.get("/creator/events/<int:event_id>/stats")
+def creator_event_stats(event_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        event = conn.execute(
+            "SELECT * FROM events WHERE id = ? AND creator_email = ?",
+            (event_id, user["email"]),
+        ).fetchone()
+        if not event:
+            abort(404)
+        totals = conn.execute(
+            """
+            SELECT
+              COUNT(*) as booking_count,
+              COALESCE(SUM(amount),0) as revenue
+            FROM bookings
+            WHERE event_id = ? AND status != 'canceled'
+            """,
+            (event_id,),
+        ).fetchone()
+        bookers = conn.execute(
+            """
+            SELECT customer_email, status, created_at
+            FROM bookings
+            WHERE event_id = ? AND status != 'canceled'
+            ORDER BY created_at DESC
+            LIMIT 50
+            """,
+            (event_id,),
+        ).fetchall()
+    return render_template(
+        "creator_event_stats.html",
+        user_email=user["email"],
+        event=event,
+        totals=totals,
+        bookers=bookers,
+        public_url=request.url_root.rstrip("/") + f"/events/{event_id}",
+    )
+
+
+@app.get("/events/<int:event_id>")
+def public_event_page(event_id: int):
+    user = _current_user()
+    with _db() as conn:
+        event = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not event:
+            abort(404)
+        conn.execute("UPDATE events SET views = COALESCE(views,0) + 1 WHERE id = ?", (event_id,))
+        booking = None
+        if user and user.get("role") == "audience":
+            booking = conn.execute(
+                """
+                SELECT id, status
+                FROM bookings
+                WHERE customer_email = ? AND event_id = ? AND status != 'canceled'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (user["email"], event_id),
+            ).fetchone()
+    return render_template(
+        "event_public.html",
+        event=event,
+        booking=booking,
+        user=user,
+    )
+
+
+@app.post("/creator/events")
+def creator_create_event():
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+
+    title = (request.form.get("title") or "").strip()
+    event_date = (request.form.get("event_date") or "").strip()
+    venue = (request.form.get("venue") or "").strip()
+    description = (request.form.get("description") or "").strip()
+
+    if not title or not event_date or not venue or not description:
+        return redirect(url_for("creator_dashboard") + "?error=missing")
+
+    thumb = request.files.get("thumbnail")
+    thumb_path = None
+    if thumb and (thumb.filename or "").strip():
+        raw = secure_filename(thumb.filename)
+        ext = os.path.splitext(raw)[1].lower()
+        if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+            return redirect(url_for("creator_dashboard") + "?error=thumb")
+        fname = f"{uuid.uuid4().hex}{ext}"
+        abs_path = os.path.join(UPLOAD_DIR, fname)
+        thumb.save(abs_path)
+        thumb_path = f"uploads/{fname}"
+
+    with _db() as conn:
+        conn.execute(
+            "INSERT INTO events (creator_email, title, event_date, venue, description, thumbnail_path) VALUES (?, ?, ?, ?, ?, ?)",
+            (user["email"], title, event_date, venue, description, thumb_path),
+        )
+    return redirect(url_for("creator_dashboard"))
+
+
+@app.get("/customer")
+def customer_dashboard():
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+
+    page, per_page = _get_page_args(default_per_page=6)
+    with _db() as conn:
+        total = (conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] or 0)
+        p = _pagination_model(page, per_page, total)
+        events = conn.execute(
+            "SELECT * FROM events ORDER BY event_date ASC LIMIT ? OFFSET ?",
+            (p["per_page"], p["offset"]),
+        ).fetchall()
+
+        booked_event_ids = {
+            r[0]
+            for r in conn.execute(
+                """
+                SELECT event_id
+                FROM bookings
+                WHERE customer_email = ? AND status != 'canceled'
+                """,
+                (user["email"],),
+            ).fetchall()
+        }
+    return render_template(
+        "customer.html",
+        user_email=user["email"],
+        events=events,
+        pagination=p,
+        booked_event_ids=booked_event_ids,
+    )
+
+
+@app.post("/book/<int:event_id>")
+def create_booking(event_id: int):
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        event = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not event:
+            abort(404)
+
+        existing = conn.execute(
+            """
+            SELECT id
+            FROM bookings
+            WHERE customer_email = ? AND event_id = ? AND status != 'canceled'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (user["email"], event_id),
+        ).fetchone()
+        if existing:
+            return redirect(
+                url_for("booking_confirmation_page", booking_id=int(existing["id"]))
+            )
+
+        amount = 0
+        user_row = conn.execute(
+            "SELECT id FROM users WHERE email = ?",
+            (user["email"],),
+        ).fetchone()
+        customer_id = int(user_row["id"]) if user_row else None
+
+        cur = conn.execute(
+            """
+            INSERT INTO bookings (customer_email, customer_id, event_id, amount, status)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user["email"], customer_id, event_id, amount, "booked"),
+        )
+        booking_id = cur.lastrowid
+    return redirect(url_for("booking_confirmation_page", booking_id=booking_id))
+
+
+@app.get("/booking/<int:booking_id>/confirmation")
+def booking_confirmation_page(booking_id: int):
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+
+    with _db() as conn:
+        row = conn.execute(
+            """
+            SELECT b.*, e.title as event_title, e.event_date as event_date, e.venue as event_venue
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE b.id = ? AND b.customer_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+    if not row:
+        abort(404)
+    return render_template("booking_confirmation.html", booking=row, user_email=user["email"])
+
+
+@app.get("/payment/<int:booking_id>")
+def payment_page(booking_id: int):
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        row = conn.execute(
+            """
+            SELECT b.*, e.title as event_title, e.event_date as event_date, e.venue as event_venue
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE b.id = ? AND b.customer_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+    if not row:
+        abort(404)
+    return render_template("payment.html", booking=row, user_email=user["email"])
+
+
+@app.post("/payment/<int:booking_id>")
+def payment_submit(booking_id: int):
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT * FROM bookings WHERE id = ? AND customer_email = ?",
+            (booking_id, user["email"]),
+        ).fetchone()
+        if not row:
+            abort(404)
+        if row["status"] == "paid":
+            return redirect(url_for("bookings_page"))
+        conn.execute(
+            "UPDATE bookings SET status = ?, paid_at = datetime('now') WHERE id = ?",
+            ("paid", booking_id),
+        )
+    return redirect(url_for("bookings_page"))
+
+
+@app.get("/bookings")
+def bookings_page():
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+
+    page, per_page = _get_page_args(default_per_page=6)
+    with _db() as conn:
+        total = (
+            conn.execute(
+                "SELECT COUNT(*) FROM bookings WHERE customer_email = ?",
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        p = _pagination_model(page, per_page, total)
+        rows = conn.execute(
+            """
+            SELECT b.*, e.title as event_title, e.event_date as event_date, e.venue as event_venue
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE b.customer_email = ?
+            ORDER BY b.created_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user["email"], p["per_page"], p["offset"]),
+        ).fetchall()
+    today = date.today()
+    return render_template(
+        "bookings.html",
+        user_email=user["email"],
+        bookings=rows,
+        today=today,
+        pagination=p,
+    )
+
+
+def _cancel_fee_percent(days_before: int) -> int | None:
+    if days_before >= 3:
+        return 5
+    if days_before == 2:
+        return 10
+    if days_before == 1:
+        return 15
+    return None
+
+
+@app.post("/bookings/<int:booking_id>/cancel")
+def cancel_booking(booking_id: int):
+    user = _require_role("audience")
+    if not isinstance(user, dict):
+        return user
+    with _db() as conn:
+        row = conn.execute(
+            """
+            SELECT b.*, e.event_date as event_date
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE b.id = ? AND b.customer_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+        if not row:
+            abort(404)
+        if row["status"] == "canceled":
+            return redirect(url_for("bookings_page"))
+        if row["status"] != "paid":
+            conn.execute(
+                "UPDATE bookings SET status = ?, canceled_at = datetime('now'), refund_amount = 0, refund_fee_percent = 0 WHERE id = ?",
+                ("canceled", booking_id),
+            )
+            return redirect(url_for("bookings_page"))
+
+        try:
+            d = datetime.strptime(row["event_date"], "%Y-%m-%d").date()
+        except ValueError:
+            return redirect(url_for("bookings_page") + "?error=date")
+
+        days_before = (d - date.today()).days
+        fee = _cancel_fee_percent(days_before)
+        if fee is None:
+            return redirect(url_for("bookings_page") + "?error=nocancel")
+
+        amount = int(row["amount"])
+        refund = int(round(amount * (1 - (fee / 100))))
+        conn.execute(
+            "UPDATE bookings SET status = ?, canceled_at = datetime('now'), refund_amount = ?, refund_fee_percent = ? WHERE id = ?",
+            ("canceled", refund, fee, booking_id),
+        )
+    return redirect(url_for("bookings_page"))
+
+
+@app.post("/signup")
+def signup():
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "").strip().lower()
+
+    signup_redirect = url_for("signup_page")
+    if role == "audience":
+        signup_redirect = url_for("signup_audience_page")
+    if role == "creator":
+        signup_redirect = url_for("signup_creator_page")
+
+    if role not in ("audience", "creator"):
+        return redirect(url_for("signup_page") + "?error=role")
+    if not name or not email or not password:
+        return redirect(signup_redirect + "?error=missing")
+
+    pw_hash = generate_password_hash(password)
+
+    try:
+        with _db() as conn:
+            conn.execute(   
+                "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                (name, email, pw_hash, role),
+            )
+    except sqlite3.IntegrityError:
+        return redirect(signup_redirect + "?error=exists")
+
+    session["user_email"] = email
+    session["user_role"] = role
+    return redirect(url_for("login_page", role=role))
+
+
+@app.post("/login")
+def login():
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "").strip().lower()
+    if role not in ("audience", "creator"):
+        role = "audience"
+    with _db() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    if not row or not check_password_hash(row["password_hash"], password):
+        return redirect(url_for("login_page") + "?error=login&role=" + role)
+
+    if row["role"] != role:
+        return redirect(url_for("login_page") + "?error=role&role=" + role)
+
+    session["user_email"] = email
+    session["user_role"] = row["role"]
+    return redirect(url_for("profile"))
+
+
+@app.get("/profile")
+def profile():
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    if user["role"] == "creator":
+        return redirect(url_for("creator_dashboard"))
+    return redirect(url_for("customer_dashboard"))
+
+
+@app.get("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=5000, debug=True)

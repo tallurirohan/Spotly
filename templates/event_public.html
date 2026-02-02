@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — {{ event['title'] }}{% endblock %}
+
+{% block brand_href %}/{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Event details">
+    <div class="dash dash--public" data-animate="fade-up">
+      <div class="event-hero">
+        <div class="event-hero__meta">
+          <div class="event-hero__title">{{ event['title'] }}</div>
+          <div class="event-hero__sub">{{ event['event_date'] }} • {{ event['venue'] }}</div>
+          <div class="event-hero__desc">{{ event['description'] }}</div>
+
+          <div class="event-hero__cta">
+            {% if user and user.role == 'audience' %}
+              {% if booking %}
+                <a class="btn btn--primary" href="/booking/{{ booking['id'] }}/confirmation">Booked — View details</a>
+              {% else %}
+                <form method="post" action="/book/{{ event['id'] }}">
+                  <button class="btn btn--primary" type="submit">Book now</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <a class="btn btn--primary" href="/login">Login to book</a>
+            {% endif %}
+            <a class="btn btn--ghost" href="/customer">Browse events</a>
+          </div>
+
+          <div class="modal__fine">Views: {{ event['views'] }}</div>
+        </div>
+
+        {% if event['thumbnail_path'] %}
+        <div class="event-hero__thumb">
+          <img src="{{ url_for('static', filename=event['thumbnail_path']) }}" alt="Event thumbnail" />
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

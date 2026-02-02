@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Audience sign up{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Audience sign up">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Create an Audience account</h2>
+        <p class="lead">Book tickets and manage your bookings.</p>
+      </div>
+
+      <div class="auth-shell" data-animate="fade-up" data-delay="120">
+        {% if error == 'missing' %}
+          <div class="modal__fine">Please fill all required fields.</div>
+        {% elif error == 'exists' %}
+          <div class="modal__fine">An account with this email already exists.</div>
+        {% endif %}
+
+        <form class="auth" method="post" action="/signup">
+          <input type="hidden" name="role" value="audience">
+          <label class="field">
+            <span class="field__label">Name</span>
+            <input class="field__input" type="text" name="name" autocomplete="name" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Email</span>
+            <input class="field__input" type="email" name="email" autocomplete="email" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Password</span>
+            <input class="field__input" type="password" name="password" autocomplete="new-password" minlength="6" required>
+          </label>
+          <button class="btn btn--audience" type="submit">Create Audience account</button>
+        </form>
+
+        <div class="modal__fine">Are you a performer? <a class="nav__link" href="/signup/creator">Create a Creator account</a></div>
+      </div>
+    </section>
+{% endblock %}

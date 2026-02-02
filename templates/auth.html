@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotly — Authentication</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <div class="bg">
+    <div class="bg__grid"></div>
+    <div class="bg__glow bg__glow--a"></div>
+    <div class="bg__glow bg__glow--b"></div>
+    <div class="bg__noise"></div>
+  </div>
+
+  <header class="top">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/" aria-label="Spotly">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">Spotly</span>
+      </a>
+      <div class="nav__links">
+        <a href="/#how" class="nav__link">How it works</a>
+        <a href="/featured-shows" class="nav__link">Featured shows</a>
+        <a href="/live-shows" class="nav__link">Live shows</a>
+        <a href="/testimonials" class="nav__link">Testimonials</a>
+      </div>
+      <div class="nav__cta">
+        <a class="btn btn--ghost" href="/">Back</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="section" aria-label="Authentication">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Welcome to Spotly</h2>
+        <p class="lead">Select your account type, then continue with sign up or login.</p>
+      </div>
+
+      <div class="auth-shell" data-animate="fade-up" data-delay="120">
+        <div class="auth-switch" role="tablist" aria-label="Auth mode">
+          <button class="tab" type="button" data-auth-mode="signup">Sign up</button>
+          <button class="tab" type="button" data-auth-mode="login">Login</button>
+        </div>
+
+        <div class="role-pills" aria-label="Account type">
+          <button class="role-pill" type="button" data-auth-role-select="audience">Audience / User</button>
+          <button class="role-pill" type="button" data-auth-role-select="creator">Creator / Talent</button>
+        </div>
+
+        <div id="authMount" data-auth-root data-initial-mode="{{ mode }}" data-initial-role="{{ role }}"></div>
+
+        <div class="modal__fine">By continuing, you agree to Spotly’s terms.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

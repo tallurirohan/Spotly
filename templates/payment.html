@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotly — Payment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <div class="bg">
+    <div class="bg__grid"></div>
+    <div class="bg__glow bg__glow--a"></div>
+    <div class="bg__glow bg__glow--b"></div>
+    <div class="bg__noise"></div>
+  </div>
+
+  <header class="top">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/customer" aria-label="Spotly">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">Spotly</span>
+      </a>
+      <div class="nav__links">
+        <a href="/customer" class="nav__link">Customer</a>
+        <a href="/bookings" class="nav__link">Bookings</a>
+      </div>
+      <div class="nav__cta">
+        <a class="btn btn--ghost" href="/logout">Logout</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="section" aria-label="Payment">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Payment (dummy)</h2>
+        <p class="lead">Complete your booking for <strong>{{ booking['event_title'] }}</strong>.</p>
+      </div>
+
+      <div class="auth-shell" data-animate="fade-up" data-delay="120">
+        <div class="lead" style="margin-bottom:10px">
+          Date: <strong>{{ booking['event_date'] }}</strong><br>
+          Venue: <strong>{{ booking['event_venue'] }}</strong><br>
+          Amount: <strong>₹ {{ booking['amount'] }}</strong>
+        </div>
+        <form method="post" action="/payment/{{ booking['id'] }}" class="auth">
+          <label class="field">
+            <span class="field__label">Card number</span>
+            <input class="field__input" type="text" placeholder="4242 4242 4242 4242" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Name on card</span>
+            <input class="field__input" type="text" placeholder="Your name" required>
+          </label>
+          <button class="btn btn--primary" type="submit">Pay now</button>
+        </form>
+        <div class="modal__fine">This is a dummy payment screen for now.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

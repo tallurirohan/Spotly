@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Create account{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Choose account type">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Create your account</h2>
+        <p class="lead">Pick the type that matches how you’ll use Spotly.</p>
+      </div>
+
+      <div class="auth-shell" data-animate="fade-up" data-delay="120">
+        <div class="roles">
+          <a class="role-card role-card--audience" href="/signup/audience" aria-label="Create Audience account">
+            <div class="role-card__icon" aria-hidden="true">🎟️</div>
+            <div class="role-panel__title">Audience</div>
+            <ul class="role-card__list">
+              <li>Book tickets</li>
+              <li>Manage bookings</li>
+              <li>Discover shows</li>
+            </ul>
+            <span class="btn btn--audience">Continue</span>
+          </a>
+
+          <a class="role-card role-card--creator" href="/signup/creator" aria-label="Create Creator account">
+            <div class="role-card__icon" aria-hidden="true">🎤</div>
+            <div class="role-panel__title">Creator / Performer</div>
+            <ul class="role-card__list">
+              <li>Create events</li>
+              <li>Publish shows</li>
+              <li>Manage your stage</li>
+            </ul>
+            <span class="btn btn--creator">Continue</span>
+          </a>
+        </div>
+
+        <div class="modal__fine">Already have an account? <a class="nav__link" href="/login">Login</a></div>
+      </div>
+    </section>
+{% endblock %}

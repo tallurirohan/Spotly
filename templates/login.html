@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Login{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Login">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Login</h2>
+        <p class="lead">Continue to your profile.</p>
+      </div>
+
+      <div class="auth-shell" data-animate="fade-up" data-delay="120">
+        {% if error == 'login' %}
+          <div class="modal__fine">Incorrect email or password.</div>
+        {% elif error == 'role' %}
+          <div class="modal__fine">That email is registered under a different account type.</div>
+        {% endif %}
+
+        <div class="role-pills" aria-label="Account type">
+          <button class="role-pill{% if role == 'audience' %} is-active{% endif %}" type="button" data-set-role="audience">Audience / User</button>
+          <button class="role-pill{% if role == 'creator' %} is-active{% endif %}" type="button" data-set-role="creator">Creator / Talent</button>
+        </div>
+
+        <form class="auth" method="post" action="/login">
+          <input type="hidden" name="role" value="{{ role }}" data-role-hidden required>
+          <label class="field">
+            <span class="field__label">Email</span>
+            <input class="field__input" type="email" name="email" autocomplete="email" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Password</span>
+            <input class="field__input" type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <button class="btn btn--primary" type="submit">Login</button>
+        </form>
+        <div class="modal__fine">New here? <a class="nav__link" href="/signup">Create an account</a></div>
+      </div>
+    </section>
+
+  <script>
+    (() => {
+      const hidden = document.querySelector('[data-role-hidden]');
+      const pills = Array.from(document.querySelectorAll('[data-set-role]'));
+      const setRole = (role) => {
+        if (!hidden) return;
+        hidden.value = role;
+        for (const p of pills) {
+          p.classList.toggle('is-active', p.getAttribute('data-set-role') === role);
+        }
+      };
+      for (const p of pills) {
+        p.addEventListener('click', () => setRole(p.getAttribute('data-set-role')));
+      }
+      if (hidden && hidden.value) setRole(hidden.value);
+    })();
+  </script>
+{% endblock %}

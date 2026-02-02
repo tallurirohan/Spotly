@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Customer{% endblock %}
+
+{% block brand_href %}/customer{% endblock %}
+
+{% block content %}
+    <section class="section" aria-label="Customer booking">
+      <div class="section__head" data-animate="fade-up">
+        <h2 class="h2">Book an event</h2>
+        <p class="lead">Logged in as <strong>{{ user_email }}</strong>. You can only book events.</p>
+      </div>
+
+      <div class="tickets">
+        {% for e in events %}
+        <article class="ticket" data-animate="fade-up">
+          <div class="ticket__top">
+            <div class="ticket__title">{{ e['title'] }}</div>
+            <div class="ticket__chip">{{ e['event_date'] }}</div>
+          </div>
+          <div class="ticket__mid">
+            <div class="ticket__meta">{{ e['venue'] }}</div>
+            <div class="ticket__price">₹ 999</div>
+          </div>
+          <div class="ticket__bottom">
+            {% if booked_event_ids and (e['id'] in booked_event_ids) %}
+              <a class="mini-btn" href="/bookings" aria-label="View bookings">Booked</a>
+            {% else %}
+              <form method="post" action="/book/{{ e['id'] }}">
+                <button class="mini-btn" type="submit">Book now</button>
+              </form>
+            {% endif %}
+            <span class="ticket__fine">{{ e['description'] }}</span>
+          </div>
+          {% if e['thumbnail_path'] %}
+          <div style="margin-top:12px">
+            <img src="{{ url_for('static', filename=e['thumbnail_path']) }}" alt="Event thumbnail" style="width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.12);display:block" />
+          </div>
+          {% endif %}
+        </article>
+        {% else %}
+        <div class="lead" data-animate="fade-up">No events available yet. Check back soon.</div>
+        {% endfor %}
+      </div>
+
+      {% if pagination and pagination.pages > 1 %}
+      <nav class="pagination" aria-label="Pagination">
+        <a class="pagination__link{% if not pagination.has_prev %} is-disabled{% endif %}" {% if pagination.has_prev %}href="?page={{ pagination.prev_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Previous</a>
+        <div class="pagination__pages" role="list">
+          {% for n in pagination.page_numbers %}
+            <a class="pagination__page{% if n == pagination.page %} is-active{% endif %}" role="listitem" href="?page={{ n }}&per_page={{ pagination.per_page }}" {% if n == pagination.page %}aria-current="page"{% endif %}>{{ n }}</a>
+          {% endfor %}
+        </div>
+        <a class="pagination__link{% if not pagination.has_next %} is-disabled{% endif %}" {% if pagination.has_next %}href="?page={{ pagination.next_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Next</a>
+      </nav>
+      {% endif %}
+    </section>
+{% endblock %}

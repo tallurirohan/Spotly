@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Spotly — Live shows{% endblock %}
+
+{% block content %}
+  <section class="section section--shows" aria-label="Live shows">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Live shows</h2>
+      <p class="lead">Ticket-style drops you can book or join—updated weekly.</p>
+    </div>
+
+    <div class="tickets">
+      <article class="ticket" data-animate="slide-left">
+        <div class="ticket__top">
+          <div class="ticket__title">Neon Night @ Aer</div>
+          <div class="ticket__chip">Fri • 8:30 PM</div>
+        </div>
+        <div class="ticket__mid">
+          <div class="ticket__meta">Mumbai • Rooftop</div>
+          <div class="ticket__price">₹ 799</div>
+        </div>
+        <div class="ticket__bottom">
+          <button class="mini-btn">Get Tickets</button>
+          <span class="ticket__fine">Limited seats</span>
+        </div>
+      </article>
+
+      <article class="ticket" data-animate="fade-up" data-delay="120">
+        <div class="ticket__top">
+          <div class="ticket__title">Laugh Lines</div>
+          <div class="ticket__chip">Sat • 7:00 PM</div>
+        </div>
+        <div class="ticket__mid">
+          <div class="ticket__meta">Bengaluru • Club</div>
+          <div class="ticket__price">₹ 499</div>
+        </div>
+        <div class="ticket__bottom">
+          <button class="mini-btn">Reserve</button>
+          <span class="ticket__fine">2-for-1 early</span>
+        </div>
+      </article>
+
+      <article class="ticket" data-animate="slide-right" data-delay="220">
+        <div class="ticket__top">
+          <div class="ticket__title">Stage Lights: Dance</div>
+          <div class="ticket__chip">Sun • 6:00 PM</div>
+        </div>
+        <div class="ticket__mid">
+          <div class="ticket__meta">Delhi • Arena</div>
+          <div class="ticket__price">₹ 999</div>
+        </div>
+        <div class="ticket__bottom">
+          <button class="mini-btn">Join</button>
+          <span class="ticket__fine">VIP add-on</span>
+        </div>
+      </article>
+    </div>
+  </section>
+{% endblock %}
