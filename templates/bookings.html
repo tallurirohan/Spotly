@@ -36,11 +36,13 @@
             {% if b['status'] == 'pending_payment' %}
               <a class="mini-btn" href="/payment/{{ b['id'] }}">Pay now</a>
             {% elif b['status'] == 'booked' %}
+              <a class="mini-btn" href="/booking/{{ b['id'] }}/ticket">View Ticket</a>
               <a class="mini-btn" href="/booking/{{ b['id'] }}/confirmation">Details</a>
               <form method="post" action="/bookings/{{ b['id'] }}/cancel">
                 <button class="mini-btn" type="submit">Cancel</button>
               </form>
             {% elif b['status'] == 'paid' %}
+              <a class="mini-btn" href="/booking/{{ b['id'] }}/ticket">View Ticket</a>
               <form method="post" action="/bookings/{{ b['id'] }}/cancel">
                 <button class="mini-btn" type="submit">Cancel</button>
               </form>

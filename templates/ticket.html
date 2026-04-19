@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Event Ticket - Spotly{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Event ticket">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Your Event Ticket</h2>
+      <p class="lead">Thank you for booking! Here's your admission ticket.</p>
+    </div>
+
+    <div class="ticket-container" data-animate="fade-up" data-delay="120">
+      <div class="ticket">
+        <div class="ticket-left">
+          <h1 class="ticket-title">{{ event.title.upper() }}</h1>
+          <p class="ticket-sub">ADMIT ONE</p>
+
+          <div class="ticket-details">
+            <p><strong>Date:</strong> {{ event.event_date }}</p>
+            <p><strong>Time:</strong> 7:00 PM</p>
+            <p><strong>Venue:</strong> {{ event.venue }}</p>
+            <p><strong>Price:</strong> Rs {{ booking.amount }}</p>
+            <p><strong>Booking ID:</strong> #{{ booking.id }}</p>
+          </div>
+
+          <div class="ticket-footer">
+            <p class="ticket-note">Please present this ticket at the entrance</p>
+          </div>
+        </div>
+
+        <div class="ticket-right">
+          <div class="stub-text">ADMIT ONE</div>
+          <div class="barcode"></div>
+          <div class="ticket-number">#{{ booking.id }}</div>
+        </div>
+      </div>
+
+      <div class="ticket-actions">
+        <button class="btn btn--primary" onclick="downloadTicket()">Download Ticket</button>
+        <button class="btn btn--ghost" onclick="printTicket()">Print Ticket</button>
+        <a href="/customer" class="btn btn--ghost">Back to Dashboard</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block head %}
+<style>
+.ticket-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+
+.ticket {
+  display: flex;
+  width: 100%;
+  max-width: 700px;
+  margin: 40px auto;
+  font-family: 'Georgia', serif;
+  background: linear-gradient(135deg, #6b7d6d, #5a6a5a);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ticket:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+/* Paper texture overlay */
+.ticket::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px),
+    repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* LEFT SECTION */
+.ticket-left {
+  flex: 3;
+  padding: 32px 24px;
+  color: #f4e7c5;
+  position: relative;
+  z-index: 2;
+}
+
+.ticket-title {
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.ticket-sub {
+  font-size: 14px;
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.ticket-details {
+  margin: 20px 0;
+}
+
+.ticket-details p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ticket-details strong {
+  color: #e3cfa3;
+  font-weight: 600;
+}
+
+.ticket-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(244, 231, 197, 0.3);
+}
+
+.ticket-note {
+  font-size: 12px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* RIGHT SECTION (STUB) */
+.ticket-right {
+  flex: 1;
+  background: linear-gradient(135deg, #e3cfa3, #d4c094);
+  color: #333;
+  padding: 20px 16px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+}
+
+/* Perforation line */
+.ticket-right::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 0;
+  height: 100%;
+  border-left: 2px dashed rgba(0,0,0,0.3);
+  z-index: 3;
+}
+
+/* Vertical text */
+.stub-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 0 auto;
+  font-size: 14px;
+  color: #5a4a3a;
+}
+
+/* Barcode */
+.barcode {
+  width: 80%;
+  height: 40px;
+  margin: 20px auto;
+  background: repeating-linear-gradient(
+    90deg,
+    #000,
+    #000 2px,
+    #fff 2px,
+    #fff 4px
+  );
+  border-radius: 2px;
+}
+
+/* Ticket number */
+.ticket-number {
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: bold;
+  color: #5a4a3a;
+  letter-spacing: 1px;
+}
+
+/* Ticket cut-out notches */
+.ticket::after {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: #0b0f1a;
+  border-radius: 50%;
+  top: 50%;
+  right: -12px;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+/* Additional decorative elements */
+.ticket-border {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(244, 231, 197, 0.2);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Actions */
+.ticket-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ticket {
+    flex-direction: column;
+    max-width: 100%;
+  }
+  
+  .ticket-left {
+    padding: 24px 20px;
+  }
+  
+  .ticket-right {
+    padding: 16px;
+    min-height: 120px;
+  }
+  
+  .ticket-right::before {
+    top: -2px;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    border-left: none;
+    border-top: 2px dashed rgba(0,0,0,0.3);
+    border-right: none;
+  }
+  
+  .ticket::after {
+    display: none;
+  }
+  
+  .stub-text {
+    writing-mode: horizontal-tb;
+    transform: none;
+    margin-bottom: 8px;
+  }
+  
+  .ticket-title {
+    font-size: 24px;
+  }
+  
+  .ticket-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .ticket-actions .btn {
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ticket-left {
+    padding: 20px 16px;
+  }
+  
+  .ticket-title {
+    font-size: 20px;
+  }
+  
+  .ticket-details p {
+    font-size: 13px;
+  }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function downloadTicket() {
+  // Create a temporary link element to download the ticket as image
+  const element = document.querySelector('.ticket');
+  
+  // For now, we'll create a simple text download
+  const ticketData = {
+    event: "{{ event.title }}",
+    date: "{{ event.event_date }}",
+    venue: "{{ event.venue }}",
+    price: "{{ booking.amount }}",
+    bookingId: "{{ booking.id }}",
+    timestamp: new Date().toISOString()
+  };
+  
+  const dataStr = JSON.stringify(ticketData, null, 2);
+  const dataBlob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(dataBlob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ticket-{{ booking.id }}.json`;
+  link.click();
+  
+  URL.revokeObjectURL(url);
+}
+
+function printTicket() {
+  window.print();
+}
+
+// Add print styles
+const printStyles = document.createElement('style');
+printStyles.textContent = `
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .ticket, .ticket * {
+      visibility: visible;
+    }
+    .ticket {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      box-shadow: none;
+    }
+    .ticket-actions {
+      display: none;
+    }
+  }
+`;
+document.head.appendChild(printStyles);
+</script>
+{% endblock %}

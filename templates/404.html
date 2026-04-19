@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Spotly{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Page not found">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Page Not Found</h2>
+      <p class="lead">The page you're looking for doesn't exist.</p>
+    </div>
+
+    <div class="auth-shell" data-animate="fade-up" data-delay="120">
+      <div class="lead">
+        <p>Sorry, the page you requested could not be found.</p>
+        <p>Please check the URL and try again, or return to the homepage.</p>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+        <a href="/" class="btn btn--primary">Go Home</a>
+        {% if user %}
+          {% if user.role == 'creator' %}
+            <a href="/creator" class="btn btn--ghost">Creator Dashboard</a>
+          {% elif user.role == 'venue_manager' %}
+            <a href="/venuehub" class="btn btn--ghost">VenueHub</a>
+          {% else %}
+            <a href="/customer" class="btn btn--ghost">Customer Dashboard</a>
+          {% endif %}
+        {% else %}
+          <a href="/signup" class="btn btn--ghost">Sign Up</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

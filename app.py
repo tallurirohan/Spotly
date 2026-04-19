@@ -4,21 +4,167 @@ import uuid
 from datetime import date, datetime
 from math import ceil
 
-from flask import Flask, abort, redirect, render_template, request, session, url_for
+from flask import Flask, abort, redirect, render_template, request, session, url_for, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+import logging
+import traceback
 
 app = Flask(__name__)
-app.secret_key = "dev"
+
+# Production-ready configuration
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production'),
+    SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=3600,  # 1 hour
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
+)
 
 UPLOAD_DIR = os.path.join(app.root_path, "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    handlers=[
+        logging.FileHandler('spotly.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
+# Rate limiting storage (simple in-memory for demo)
+rate_limit_storage = {}
+
+
+@app.before_request
+def before_request():
+    """Security headers and rate limiting."""
+    # Security headers
+    if request.endpoint and request.endpoint.startswith('static'):
+        return  # Skip static files
+    
+    # Add security headers
+    response = None
+    
+    # Rate limiting for sensitive endpoints
+    if request.endpoint in ['signup', 'login']:
+        client_ip = request.remote_addr
+        key = f"{client_ip}:{request.endpoint}"
+        now = datetime.now().timestamp()
+        
+        if key not in rate_limit_storage:
+            rate_limit_storage[key] = []
+        
+        # Clean old requests (older than 1 minute)
+        rate_limit_storage[key] = [t for t in rate_limit_storage[key] if now - t < 60]
+        
+        # Check rate limit (max 5 requests per minute)
+        if len(rate_limit_storage[key]) >= 5:
+            return "Rate limit exceeded", 429
+        
+        rate_limit_storage[key].append(now)
+    
+    return response
+
+
+@app.after_request
+def after_request(response):
+    """Add security headers to all responses."""
+    if request.endpoint and request.endpoint.startswith('static'):
+        return response  # Skip static files
+    
+    # Security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self';"
+    )
+    
+    return response
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors."""
+    logger.warning(f"404 error: {request.url}")
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found'}), 404
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors."""
+    logger.error(f"500 error: {request.url} - {str(error)}")
+    logger.error(traceback.format_exc())
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Internal server error'}), 500
+    return render_template('500.html'), 500
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    """Handle rate limiting errors."""
+    logger.warning(f"Rate limit exceeded: {request.remote_addr}")
+    return jsonify({'error': 'Rate limit exceeded'}), 429
 
 
 def _db():
     conn = sqlite3.connect("spotly.db")
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _validate_email(email: str) -> bool:
+    """Validate email format."""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+
+def _validate_password(password: str) -> tuple[bool, str]:
+    """Validate password strength."""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if not any(c.isupper() for c in password):
+        return False, "Password must contain at least one uppercase letter"
+    if not any(c.islower() for c in password):
+        return False, "Password must contain at least one lowercase letter"
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one digit"
+    return True, "Password is valid"
+
+
+def _sanitize_string(text: str, max_length: int = 255) -> str:
+    """Sanitize and truncate string input."""
+    if not text:
+        return ""
+    # Remove potential HTML tags and limit length
+    import re
+    text = re.sub(r'<[^>]+>', '', text)
+    text = text.strip()[:max_length]
+    return text
+
+
+def _validate_date(date_str: str) -> bool:
+    """Validate date format and ensure it's not in the past."""
+    try:
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        return parsed_date >= date.today()
+    except ValueError:
+        return False
 
 
 def _init_db():
@@ -646,7 +792,7 @@ def public_event_page(event_id: int):
             abort(404)
         conn.execute("UPDATE events SET views = COALESCE(views,0) + 1 WHERE id = ?", (event_id,))
         booking = None
-        if user and user.get("role") == "audience":
+        if user and user["role"] == "audience":
             booking = conn.execute(
                 """
                 SELECT id, status
@@ -671,13 +817,29 @@ def creator_create_event():
     if not isinstance(user, dict):
         return user
 
-    title = (request.form.get("title") or "").strip()
+    title = _sanitize_string((request.form.get("title") or "").strip(), 200)
     event_date = (request.form.get("event_date") or "").strip()
-    venue = (request.form.get("venue") or "").strip()
-    description = (request.form.get("description") or "").strip()
+    venue = _sanitize_string((request.form.get("venue") or "").strip(), 200)
+    description = _sanitize_string((request.form.get("description") or "").strip(), 2000)
 
+    # Comprehensive validation
     if not title or not event_date or not venue or not description:
         return redirect(url_for("creator_dashboard") + "?error=missing")
+    
+    # Validate title length
+    if len(title) < 3 or len(title) > 200:
+        return redirect(url_for("creator_dashboard") + "?error=title")
+    
+    # Validate date format and ensure it's not in the past
+    if not _validate_date(event_date):
+        return redirect(url_for("creator_dashboard") + "?error=date")
+    
+    # Validate venue and description lengths
+    if len(venue) < 3 or len(venue) > 200:
+        return redirect(url_for("creator_dashboard") + "?error=venue")
+    
+    if len(description) < 10 or len(description) > 2000:
+        return redirect(url_for("creator_dashboard") + "?error=description")
 
     thumb = request.files.get("thumbnail")
     thumb_path = None
@@ -784,23 +946,60 @@ def create_booking(event_id: int):
 
 @app.get("/booking/<int:booking_id>/confirmation")
 def booking_confirmation_page(booking_id: int):
-    user = _require_role("audience")
+    user = _require_login()
     if not isinstance(user, dict):
         return user
 
     with _db() as conn:
-        row = conn.execute(
+        booking = conn.execute(
             """
-            SELECT b.*, e.title as event_title, e.event_date as event_date, e.venue as event_venue
+            SELECT b.*, e.title, e.event_date, e.venue, e.description
             FROM bookings b
             JOIN events e ON e.id = b.event_id
             WHERE b.id = ? AND b.customer_email = ?
             """,
             (booking_id, user["email"]),
         ).fetchone()
-    if not row:
-        abort(404)
-    return render_template("booking_confirmation.html", booking=row, user_email=user["email"])
+
+        if not booking:
+            abort(404)
+
+    return render_template("booking_confirmation.html", booking=booking, event=booking)
+
+
+@app.get("/booking/<int:booking_id>/ticket")
+def booking_ticket_page(booking_id: int):
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+
+    with _db() as conn:
+        booking = conn.execute(
+            """
+            SELECT b.*, e.title, e.event_date, e.venue, e.description
+            FROM bookings b
+            JOIN events e ON e.id = b.event_id
+            WHERE b.id = ? AND b.customer_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+
+        if not booking:
+            abort(404)
+
+        # Check if payment is verified (for now, we'll assume all bookings are verified)
+        # In the future, you might want to add a payment_status field to the bookings table
+        # For now, all bookings can access their tickets directly
+
+        # Create event object from the joined query result
+        event_data = {
+            'title': booking['title'],
+            'event_date': booking['event_date'],
+            'venue': booking['venue'],
+            'description': booking['description']
+        }
+        
+        return render_template("ticket.html", booking=booking, event=event_data)
 
 
 @app.get("/payment/<int:booking_id>")
@@ -938,7 +1137,7 @@ def cancel_booking(booking_id: int):
 
 @app.post("/signup")
 def signup():
-    name = (request.form.get("name") or "").strip()
+    name = _sanitize_string((request.form.get("name") or "").strip(), 100)
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     role = (request.form.get("role") or "").strip().lower()
@@ -951,10 +1150,24 @@ def signup():
     if role == "venue_manager":
         signup_redirect = url_for("signup_venue_manager_page")
 
+    # Comprehensive validation
     if role not in ("audience", "creator", "venue_manager"):
         return redirect(url_for("signup_page") + "?error=role")
     if not name or not email or not password:
         return redirect(signup_redirect + "?error=missing")
+    
+    # Validate email format
+    if not _validate_email(email):
+        return redirect(signup_redirect + "?error=email")
+    
+    # Validate password strength
+    is_valid_password, password_error = _validate_password(password)
+    if not is_valid_password:
+        return redirect(signup_redirect + "?error=password")
+    
+    # Validate name length
+    if len(name) < 2 or len(name) > 100:
+        return redirect(signup_redirect + "?error=name")
 
     pw_hash = generate_password_hash(password)
 
@@ -1196,11 +1409,26 @@ def creator_request_venue(venue_id: int):
 
 
 if __name__ == "__main__":
-    print("Starting Spotly application...")
-    print("Database initialized successfully")
-    print("Available routes:")
-    for rule in app.url_map.iter_rules():
-        print(f"  {rule.methods} {rule.rule}")
-    print("\nStarting Flask server on http://127.0.0.1:5000")
-    print("Press Ctrl+C to stop the server")
-    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+    # Initialize database
+    _init_db()
+    
+    # Production-ready server configuration
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    
+    if not is_production:
+        print("Starting Spotly application in DEVELOPMENT mode...")
+        print("Database initialized successfully")
+        print("Available routes:")
+        for rule in app.url_map.iter_rules():
+            print(f"  {rule.methods} {rule.rule}")
+        print("\nStarting Flask server on http://127.0.0.1:5000")
+        print("Press Ctrl+C to stop the server")
+        app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+    else:
+        logger.info("Starting Spotly application in PRODUCTION mode...")
+        app.run(
+            host='0.0.0.0',
+            port=int(os.environ.get('PORT', 5000)),
+            debug=False,
+            use_reloader=False
+        )

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - Spotly{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Server error">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Something Went Wrong</h2>
+      <p class="lead">We're experiencing technical difficulties.</p>
+    </div>
+
+    <div class="auth-shell" data-animate="fade-up" data-delay="120">
+      <div class="lead">
+        <p>Sorry, something went wrong on our end.</p>
+        <p>We've been notified about this issue and will fix it soon.</p>
+        <p>Please try again later or contact support if the problem persists.</p>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+        <a href="/" class="btn btn--primary">Go Home</a>
+        <a href="javascript:history.back()" class="btn btn--ghost">Go Back</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
