@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up as Venue Manager - Spotly{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Venue Manager signup">
+    <div class="auth-shell" data-animate="fade-up">
+      <div class="auth-header">
+        <div class="auth-header__title">Join as Venue Manager</div>
+        <div class="auth-header__sub">List your venues and manage booking requests from event creators.</div>
+      </div>
+
+      <form class="auth" method="post" action="/signup">
+        <input type="hidden" name="role" value="venue_manager">
+        
+        {% if error %}
+          <div class="panel__empty" style="color: #ff6b6b; margin-bottom: 12px;">
+            {% if error == 'missing' %}Please fill in all fields.{% endif %}
+            {% if error == 'exists' %}An account with this email already exists.{% endif %}
+            {% if error == 'role' %}Invalid role selected.{% endif %}
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label class="field__label">Full name</label>
+          <input class="field__input" type="text" name="name" required autocomplete="name">
+        </div>
+
+        <div class="field">
+          <label class="field__label">Email address</label>
+          <input class="field__input" type="email" name="email" required autocomplete="email">
+        </div>
+
+        <div class="field">
+          <label class="field__label">Password</label>
+          <input class="field__input" type="password" name="password" required autocomplete="new-password">
+        </div>
+
+        <button class="btn btn--primary btn--lg" type="submit">Create Venue Manager Account</button>
+      </form>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <span style="color: rgba(233,233,255,.7); font-size: 14px;">
+          Already have an account? 
+          <a href="/login?role=venue_manager" style="color: var(--b); font-weight: 600;">Sign in</a>
+        </span>
+      </div>
+    </div>
+  </section>
+{% endblock %}

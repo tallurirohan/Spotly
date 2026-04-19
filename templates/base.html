@@ -33,6 +33,9 @@
               <a href="/bookings" class="nav__link">Bookings</a>
             {% elif user.role == 'creator' %}
               <a href="/creator" class="nav__link">Creator</a>
+              <a href="/creator/venues" class="nav__link">Venues</a>
+            {% elif user.role == 'venue_manager' %}
+              <a href="/venuehub" class="nav__link">VenueHub</a>
             {% endif %}
           {% endif %}
           <a href="/featured-shows" class="nav__link">Featured shows</a>
@@ -44,7 +47,7 @@
       <div class="nav__cta">
         {% block nav_cta %}
           {% if user %}
-            <a class="btn btn--ghost" href="{% if user.role == 'creator' %}/creator{% else %}/customer{% endif %}">Dashboard</a>
+            <a class="btn btn--ghost" href="{% if user.role == 'creator' %}/creator{% elif user.role == 'venue_manager' %}/venuehub{% else %}/customer{% endif %}">Dashboard</a>
             <a class="btn btn--primary" href="/logout">Logout</a>
           {% else %}
             <a class="btn btn--ghost" href="/login">Login</a>

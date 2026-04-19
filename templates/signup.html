@@ -1,40 +1,66 @@
 {% extends "base.html" %}
 
-{% block title %}Spotly — Create account{% endblock %}
+{% block title %}Spotly - Create account{% endblock %}
 
 {% block content %}
   <section class="section" aria-label="Choose account type">
       <div class="section__head" data-animate="fade-up">
         <h2 class="h2">Create your account</h2>
-        <p class="lead">Pick the type that matches how you’ll use Spotly.</p>
+        <p class="lead">Choose your role to get started with Spotly</p>
       </div>
 
       <div class="auth-shell" data-animate="fade-up" data-delay="120">
         <div class="roles">
-          <a class="role-card role-card--audience" href="/signup/audience" aria-label="Create Audience account">
-            <div class="role-card__icon" aria-hidden="true">🎟️</div>
-            <div class="role-panel__title">Audience</div>
-            <ul class="role-card__list">
-              <li>Book tickets</li>
-              <li>Manage bookings</li>
-              <li>Discover shows</li>
+          <a class="role-card role-card--audience" href="/signup/audience?role=audience" aria-label="Create Audience account">
+            <div class="role-card__header">
+              <div class="role-card__icon" aria-hidden="true">Audience</div>
+              <h3 class="role-card__title"></h3>
+            </div>
+            <p class="role-card__description">Discover and book live experiences</p>
+            <ul class="role-card__features">
+              <li>Book tickets instantly</li>
+              <li>Track your bookings</li>
+              <li>Explore trending shows</li>
             </ul>
-            <span class="btn btn--audience">Continue</span>
+            <div class="role-card__footer">
+              <span class="btn btn--primary">Continue</span>
+            </div>
           </a>
 
-          <a class="role-card role-card--creator" href="/signup/creator" aria-label="Create Creator account">
-            <div class="role-card__icon" aria-hidden="true">🎤</div>
-            <div class="role-panel__title">Creator / Performer</div>
-            <ul class="role-card__list">
-              <li>Create events</li>
-              <li>Publish shows</li>
-              <li>Manage your stage</li>
+          <a class="role-card role-card--creator" href="/signup/creator?role=creator" aria-label="Create Creator account">
+            <div class="role-card__header">
+              <div class="role-card__icon" aria-hidden="true">Creator</div>
+              <h3 class="role-card__title"></h3>
+            </div>
+            <p class="role-card__description">Create and manage your events</p>
+            <ul class="role-card__features">
+              <li>Publish events</li>
+              <li>Manage bookings</li>
+              <li>Grow your audience</li>
             </ul>
-            <span class="btn btn--creator">Continue</span>
+            <div class="role-card__footer">
+              <span class="btn btn--primary">Continue</span>
+            </div>
+          </a>
+
+          <a class="role-card role-card--venue" href="/signup/venue_manager?role=venue_manager" aria-label="Create Venue Manager account">
+            <div class="role-card__header">
+              <div class="role-card__icon" aria-hidden="true">Venue Manager</div>
+              <h3 class="role-card__title"></h3>
+            </div>
+            <p class="role-card__description">List and manage your venues</p>
+            <ul class="role-card__features">
+              <li>Add venue details</li>
+              <li>Handle booking requests</li>
+              <li>Maximize occupancy</li>
+            </ul>
+            <div class="role-card__footer">
+              <span class="btn btn--primary">Continue</span>
+            </div>
           </a>
         </div>
 
-        <div class="modal__fine">Already have an account? <a class="nav__link" href="/login">Login</a></div>
+        <div class="auth__footer">Already have an account? <a class="nav__link" href="/login">Login</a></div>
       </div>
     </section>
 {% endblock %}

@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block title %}VenueHub - Spotly{% endblock %}
+
+{% block brand_href %}/venuehub{% endblock %}
+
+{% block nav_links %}
+  {% if user %}
+    {% if user.role == 'audience' %}
+      <a href="/customer" class="nav__link">Customer</a>
+      <a href="/bookings" class="nav__link">Bookings</a>
+    {% elif user.role == 'creator' %}
+      <a href="/creator" class="nav__link">Creator</a>
+    {% endif %}
+    <a href="/venuehub" class="nav__link">VenueHub</a>
+  {% endif %}
+  <a href="/featured-shows" class="nav__link">Featured shows</a>
+  <a href="/live-shows" class="nav__link">Live shows</a>
+  <a href="/testimonials" class="nav__link">Testimonials</a>
+{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="VenueHub dashboard">
+    <div class="dash" data-animate="fade-up">
+      <div class="dash__top">
+        <div class="dash__title">
+          <h2 class="h2">VenueHub</h2>
+          <p class="lead">Manage your venues and booking requests. Logged in as <strong>{{ user_email }}</strong>.</p>
+        </div>
+      </div>
+
+      <div class="dash__grid">
+        <div class="dash__col dash__col--main">
+          <!-- Add Venue Card -->
+          <div class="panel" data-animate="fade-up" data-delay="90">
+            <div class="panel__head">
+              <div class="panel__title">Add Venue</div>
+              <div class="panel__sub">List a new venue for events and bookings.</div>
+            </div>
+            <form class="auth" method="post" action="/venuehub/venues" enctype="multipart/form-data">
+              <div class="form-grid">
+                <label class="field">
+                  <span class="field__label">Venue Name</span>
+                  <input class="field__input" type="text" name="name" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">City</span>
+                  <input class="field__input" type="text" name="city" required>
+                </label>
+                <label class="field field--full">
+                  <span class="field__label">Address</span>
+                  <input class="field__input" type="text" name="address" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Capacity</span>
+                  <input class="field__input" type="number" name="capacity" min="1" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Price per Day (Rs)</span>
+                  <input class="field__input" type="number" name="price_per_day" min="0" required>
+                </label>
+                <label class="field">
+                  <span class="field__label">Price per Hour (Rs)</span>
+                  <input class="field__input" type="number" name="price_per_hour" min="0" required>
+                </label>
+                <label class="field field--full">
+                  <span class="field__label">Amenities</span>
+                  <div class="amenities-grid">
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="parking">
+                      <span>Parking</span>
+                    </label>
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="ac">
+                      <span>AC</span>
+                    </label>
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="stage">
+                      <span>Stage</span>
+                    </label>
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="sound">
+                      <span>Sound System</span>
+                    </label>
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="lighting">
+                      <span>Lighting</span>
+                    </label>
+                    <label class="amenity-item">
+                      <input type="checkbox" name="amenities" value="catering">
+                      <span>Catering</span>
+                    </label>
+                  </div>
+                </label>
+                <label class="field field--full">
+                  <span class="field__label">Images</span>
+                  <input class="field__input" type="file" name="images" accept="image/png,image/jpeg,image/webp" multiple>
+                </label>
+                <label class="field field--full">
+                  <span class="field__label">Description</span>
+                  <textarea class="field__input" name="description" rows="4" required></textarea>
+                </label>
+              </div>
+              <div class="panel__actions">
+                <button class="btn btn--primary" type="submit">List Venue</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Your Venues Section -->
+          <div class="panel" data-animate="fade-up" data-delay="140" style="margin-top:16px">
+            <div class="panel__head">
+              <div>
+                <div class="panel__title">Your Venues</div>
+                <div class="panel__sub">Manage your listed venues.</div>
+              </div>
+            </div>
+
+            {% if venues and venues|length > 0 %}
+              <div class="venues-grid">
+                {% for venue in venues %}
+                  <div class="venue-card" data-animate="fade-up">
+                    <div class="venue-card__image">
+                      {% if venue.images %}
+                        <img src="{{ venue.images.split(',')[0] }}" alt="{{ venue.name }}">
+                      {% else %}
+                        <div class="venue-card__placeholder">No image</div>
+                      {% endif %}
+                    </div>
+                    <div class="venue-card__content">
+                      <h3 class="venue-card__name">{{ venue.name }}</h3>
+                      <div class="venue-card__meta">
+                        <span class="venue-card__location">{{ venue.city }}</span>
+                        <span class="venue-card__address">{{ venue.address }}</span>
+                      </div>
+                      <div class="venue-card__specs">
+                        <div class="venue-card__spec">
+                          <span class="venue-card__spec-label">Capacity</span>
+                          <span class="venue-card__spec-value">{{ venue.capacity }}</span>
+                        </div>
+                        <div class="venue-card__spec">
+                          <span class="venue-card__spec-label">Price/Day</span>
+                          <span class="venue-card__spec-value">Rs {{ venue.price_per_day }}</span>
+                        </div>
+                      </div>
+                      <div class="venue-card__actions">
+                        <button class="mini-btn">Edit</button>
+                        <button class="mini-btn">Preview</button>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+
+              {% if pagination and pagination.pages > 1 %}
+                <nav class="pagination" aria-label="Pagination">
+                  <a class="pagination__link{% if not pagination.has_prev %} is-disabled{% endif %}" {% if pagination.has_prev %}href="?page={{ pagination.prev_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Previous</a>
+                  <div class="pagination__pages" role="list">
+                    {% for n in pagination.page_numbers %}
+                      <a class="pagination__page{% if n == pagination.page %} is-active{% endif %}" role="listitem" href="?page={{ n }}&per_page={{ pagination.per_page }}" {% if n == pagination.page %}aria-current="page"{% endif %}>{{ n }}</a>
+                    {% endfor %}
+                  </div>
+                  <a class="pagination__link{% if not pagination.has_next %} is-disabled{% endif %}" {% if pagination.has_next %}href="?page={{ pagination.next_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Next</a>
+                </nav>
+              {% endif %}
+            {% else %}
+              <div class="empty" aria-label="Empty state">
+                <div class="empty__icon" aria-hidden="true"> buildings</div>
+                <div class="empty__title">No venues yet</div>
+                <div class="empty__sub">List your first venue to start receiving booking requests.</div>
+                <button class="btn btn--primary" type="button" onclick="document.querySelector('input[name=name]').focus()">List your first venue</button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="dash__col dash__col--side">
+          <!-- Booking Requests Panel -->
+          <div class="panel" data-animate="fade-up" data-delay="110">
+            <div class="panel__head">
+              <div class="panel__title">Booking Requests</div>
+              <div class="panel__sub">Review and respond to requests.</div>
+            </div>
+            <div class="booking-requests" aria-label="Booking requests">
+              {% for request in booking_requests %}
+                <div class="booking-request">
+                  <div class="booking-request__header">
+                    <h4 class="booking-request__title">{{ request.event_title }}</h4>
+                    <span class="booking-request__venue">{{ request.venue_name }}</span>
+                  </div>
+                  <div class="booking-request__meta">
+                    <span class="booking-request__date">{{ request.requested_date }}</span>
+                    <span class="booking-request__creator">{{ request.creator_email }}</span>
+                  </div>
+                  <div class="booking-request__status">
+                    <span class="badge badge--{{ request.status }}">{{ request.status }}</span>
+                  </div>
+                  {% if request.status == 'pending' %}
+                    <div class="booking-request__actions">
+                      <form method="post" action="/venuehub/bookings/{{ request.id }}/approve" style="margin:0">
+                        <button class="mini-btn btn--primary" type="submit">Approve</button>
+                      </form>
+                      <form method="post" action="/venuehub/bookings/{{ request.id }}/reject" style="margin:0">
+                        <button class="mini-btn btn--secondary" type="submit">Reject</button>
+                      </form>
+                    </div>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="panel__empty">No booking requests yet.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block head %}
+<style>
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.amenity-item:hover {
+  border-color: rgba(255,255,255,.20);
+  background: rgba(255,255,255,.08);
+}
+
+.amenity-item input[type="checkbox"] {
+  accent-color: var(--b);
+}
+
+.amenity-item span {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(233,233,255,.9);
+}
+
+.venues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.venue-card {
+  border-radius: 18px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.venue-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 70px rgba(0,0,0,.35);
+}
+
+.venue-card__image {
+  height: 160px;
+  background: rgba(0,0,0,.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.venue-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.venue-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(233,233,255,.6);
+  font-size: 14px;
+}
+
+.venue-card__content {
+  padding: 16px;
+}
+
+.venue-card__name {
+  margin: 0 0 8px 0;
+  font-family: "Space Grotesk", Inter;
+  font-weight: 800;
+  font-size: 16px;
+  color: rgba(233,233,255,.94);
+}
+
+.venue-card__meta {
+  margin-bottom: 12px;
+}
+
+.venue-card__location {
+  font-weight: 700;
+  color: rgba(233,233,255,.9);
+  font-size: 13px;
+}
+
+.venue-card__address {
+  color: rgba(233,233,255,.7);
+  font-size: 12px;
+  margin-top: 2px;
+  display: block;
+}
+
+.venue-card__specs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.venue-card__spec {
+  display: flex;
+  flex-direction: column;
+}
+
+.venue-card__spec-label {
+  font-size: 11px;
+  color: rgba(233,233,255,.6);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.venue-card__spec-value {
+  font-size: 13px;
+  color: rgba(233,233,255,.9);
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.venue-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.booking-requests {
+  display: grid;
+  gap: 12px;
+}
+
+.booking-request {
+  border-radius: 16px;
+  background: rgba(0,0,0,.14);
+  border: 1px solid rgba(255,255,255,.10);
+  padding: 12px;
+}
+
+.booking-request__header {
+  margin-bottom: 8px;
+}
+
+.booking-request__title {
+  margin: 0 0 4px 0;
+  font-family: "Space Grotesk", Inter;
+  font-weight: 800;
+  font-size: 14px;
+  color: rgba(233,233,255,.94);
+}
+
+.booking-request__venue {
+  font-size: 12px;
+  color: rgba(233,233,255,.7);
+}
+
+.booking-request__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.booking-request__date {
+  font-size: 11px;
+  color: rgba(233,233,255,.8);
+  font-weight: 700;
+}
+
+.booking-request__creator {
+  font-size: 11px;
+  color: rgba(233,233,255,.6);
+}
+
+.booking-request__status {
+  margin-bottom: 8px;
+}
+
+.booking-request__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.badge--pending {
+  border-color: rgba(255,193,7,.35);
+  box-shadow: 0 0 0 1px rgba(255,193,7,.12) inset;
+}
+
+.badge--approved {
+  border-color: rgba(40,167,69,.35);
+  box-shadow: 0 0 0 1px rgba(40,167,69,.12) inset;
+}
+
+.badge--rejected {
+  border-color: rgba(220,53,69,.35);
+  box-shadow: 0 0 0 1px rgba(220,53,69,.12) inset;
+}
+
+@media (max-width: 768px) {
+  .amenities-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .venues-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .venue-card__specs {
+    gap: 12px;
+  }
+}
+</style>
+{% endblock %}

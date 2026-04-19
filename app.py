@@ -103,6 +103,42 @@ def _init_db():
             """
         )
 
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS venues (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              manager_email TEXT NOT NULL,
+              name TEXT NOT NULL,
+              city TEXT NOT NULL,
+              address TEXT NOT NULL,
+              capacity INTEGER NOT NULL,
+              price_per_day INTEGER NOT NULL,
+              price_per_hour INTEGER NOT NULL,
+              amenities TEXT NOT NULL,
+              description TEXT NOT NULL,
+              images TEXT,
+              is_active INTEGER NOT NULL DEFAULT 1,
+              created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS venue_bookings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              venue_id INTEGER NOT NULL,
+              event_title TEXT NOT NULL,
+              creator_email TEXT NOT NULL,
+              requested_date TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending',
+              created_at TEXT NOT NULL DEFAULT (datetime('now')),
+              updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+              FOREIGN KEY(venue_id) REFERENCES venues(id)
+            )
+            """
+        )
+
 
 _init_db()
 
@@ -114,7 +150,7 @@ def index():
 def _current_user():
     email = session.get("user_email")
     role = session.get("user_role")
-    if not email or role not in ("audience", "creator"):
+    if not email or role not in ("audience", "creator", "venue_manager"):
         return None
     return {"email": email, "role": role}
 
@@ -207,10 +243,17 @@ def signup_creator_page():
     return render_template("signup_creator.html", role=role, error=error)
 
 
+@app.get("/signup/venue_manager")
+def signup_venue_manager_page():
+    role = "venue_manager"
+    error = request.args.get("error")
+    return render_template("signup_venue_manager.html", role=role, error=error)
+
+
 @app.get("/login")
 def login_page():
     role = (request.args.get("role") or "audience").strip().lower()
-    if role not in ("audience", "creator"):
+    if role not in ("audience", "creator", "venue_manager"):
         role = "audience"
     error = request.args.get("error")
     return render_template("login.html", role=role, error=error)
@@ -429,8 +472,13 @@ def creator_edit_event_submit(event_id: int):
             return redirect(url_for("creator_edit_event_page", event_id=event_id) + "?error=thumb")
         fname = f"{uuid.uuid4().hex}{ext}"
         abs_path = os.path.join(UPLOAD_DIR, fname)
-        thumb.save(abs_path)
-        thumb_path = f"uploads/{fname}"
+        try:
+            thumb.save(abs_path)
+            thumb_path = f"uploads/{fname}"
+        except Exception as e:
+            # Log the error and continue without thumbnail
+            print(f"Error saving thumbnail: {e}")
+            thumb_path = None
 
     with _db() as conn:
         existing = conn.execute(
@@ -498,6 +546,53 @@ def creator_delete_event(event_id: int):
             (event_id, user["email"]),
         )
     return redirect(url_for("creator_dashboard"))
+
+
+@app.get("/creator/venues")
+def creator_venues_page():
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+
+    page, per_page = _get_page_args(default_per_page=9)
+    try:
+        with _db() as conn:
+            total = (
+                conn.execute(
+                    "SELECT COUNT(*) FROM venues WHERE is_active = 1",
+                    (),
+                ).fetchone()[0]
+                or 0
+            )
+            p = _pagination_model(page, per_page, total)
+            
+            venues = conn.execute(
+                """
+                SELECT v.*, u.name as manager_name
+                FROM venues v
+                JOIN users u ON u.email = v.manager_email
+                WHERE v.is_active = 1
+                ORDER BY v.created_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (p["per_page"], p["offset"]),
+            ).fetchall()
+
+        return render_template(
+            "creator_venues.html",
+            user_email=user["email"],
+            venues=venues,
+            pagination=p,
+        )
+    except Exception as e:
+        print(f"Error loading venues: {e}")
+        # Return empty venues list on error
+        return render_template(
+            "creator_venues.html",
+            user_email=user["email"],
+            venues=[],
+            pagination={"pages": 1, "page": 1, "has_prev": False, "has_next": False},
+        )
 
 
 @app.get("/creator/events/<int:event_id>/stats")
@@ -593,8 +688,13 @@ def creator_create_event():
             return redirect(url_for("creator_dashboard") + "?error=thumb")
         fname = f"{uuid.uuid4().hex}{ext}"
         abs_path = os.path.join(UPLOAD_DIR, fname)
-        thumb.save(abs_path)
-        thumb_path = f"uploads/{fname}"
+        try:
+            thumb.save(abs_path)
+            thumb_path = f"uploads/{fname}"
+        except Exception as e:
+            # Log the error and continue without thumbnail
+            print(f"Error saving thumbnail: {e}")
+            thumb_path = None
 
     with _db() as conn:
         conn.execute(
@@ -848,8 +948,10 @@ def signup():
         signup_redirect = url_for("signup_audience_page")
     if role == "creator":
         signup_redirect = url_for("signup_creator_page")
+    if role == "venue_manager":
+        signup_redirect = url_for("signup_venue_manager_page")
 
-    if role not in ("audience", "creator"):
+    if role not in ("audience", "creator", "venue_manager"):
         return redirect(url_for("signup_page") + "?error=role")
     if not name or not email or not password:
         return redirect(signup_redirect + "?error=missing")
@@ -875,7 +977,7 @@ def login():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     role = (request.form.get("role") or "").strip().lower()
-    if role not in ("audience", "creator"):
+    if role not in ("audience", "creator", "venue_manager"):
         role = "audience"
     with _db() as conn:
         row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
@@ -898,6 +1000,8 @@ def profile():
         return user
     if user["role"] == "creator":
         return redirect(url_for("creator_dashboard"))
+    elif user["role"] == "venue_manager":
+        return redirect(url_for("venuehub_dashboard"))
     return redirect(url_for("customer_dashboard"))
 
 
@@ -906,5 +1010,197 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
+
+@app.get("/venuehub")
+def venuehub_dashboard():
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    
+    page, per_page = _get_page_args(default_per_page=6)
+    with _db() as conn:
+        total = (
+            conn.execute(
+                "SELECT COUNT(*) FROM venues WHERE manager_email = ?",
+                (user["email"],),
+            ).fetchone()[0]
+            or 0
+        )
+        p = _pagination_model(page, per_page, total)
+        
+        venues = conn.execute(
+            """
+            SELECT * FROM venues 
+            WHERE manager_email = ? 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+            """,
+            (user["email"], p["per_page"], p["offset"]),
+        ).fetchall()
+        
+        booking_requests = conn.execute(
+            """
+            SELECT vb.*, v.name as venue_name
+            FROM venue_bookings vb
+            JOIN venues v ON v.id = vb.venue_id
+            WHERE v.manager_email = ?
+            ORDER BY vb.created_at DESC
+            LIMIT 10
+            """,
+            (user["email"],),
+        ).fetchall()
+    
+    return render_template(
+        "venuehub.html",
+        user_email=user["email"],
+        venues=venues,
+        pagination=p,
+        booking_requests=booking_requests,
+    )
+
+
+@app.post("/venuehub/venues")
+def venuehub_create_venue():
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    
+    name = (request.form.get("name") or "").strip()
+    city = (request.form.get("city") or "").strip()
+    address = (request.form.get("address") or "").strip()
+    capacity = request.form.get("capacity")
+    price_per_day = request.form.get("price_per_day")
+    price_per_hour = request.form.get("price_per_hour")
+    amenities = request.form.getlist("amenities")
+    description = (request.form.get("description") or "").strip()
+    
+    if not name or not city or not address or not capacity or not price_per_day or not price_per_hour or not description:
+        return redirect(url_for("venuehub_dashboard") + "?error=missing")
+    
+    try:
+        capacity = int(capacity)
+        price_per_day = int(price_per_day)
+        price_per_hour = int(price_per_hour)
+    except ValueError:
+        return redirect(url_for("venuehub_dashboard") + "?error=invalid")
+    
+    amenities_str = ",".join(amenities) if amenities else ""
+    
+    try:
+        with _db() as conn:
+            conn.execute(
+                """
+                INSERT INTO venues 
+                (manager_email, name, city, address, capacity, price_per_day, price_per_hour, amenities, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (user["email"], name, city, address, capacity, price_per_day, price_per_hour, amenities_str, description),
+            )
+    except sqlite3.IntegrityError as e:
+        print(f"Database error creating venue: {e}")
+        return redirect(url_for("venuehub_dashboard") + "?error=database")
+    except Exception as e:
+        print(f"Unexpected error creating venue: {e}")
+        return redirect(url_for("venuehub_dashboard") + "?error=unknown")
+    
+    return redirect(url_for("venuehub_dashboard"))
+
+
+@app.post("/venuehub/bookings/<int:booking_id>/approve")
+def venuehub_approve_booking(booking_id: int):
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    
+    with _db() as conn:
+        booking = conn.execute(
+            """
+            SELECT vb.* FROM venue_bookings vb
+            JOIN venues v ON v.id = vb.venue_id
+            WHERE vb.id = ? AND v.manager_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+        
+        if not booking:
+            abort(404)
+        
+        conn.execute(
+            "UPDATE venue_bookings SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            ("approved", booking_id),
+        )
+    
+    return redirect(url_for("venuehub_dashboard"))
+
+
+@app.post("/venuehub/bookings/<int:booking_id>/reject")
+def venuehub_reject_booking(booking_id: int):
+    user = _require_login()
+    if not isinstance(user, dict):
+        return user
+    
+    with _db() as conn:
+        booking = conn.execute(
+            """
+            SELECT vb.* FROM venue_bookings vb
+            JOIN venues v ON v.id = vb.venue_id
+            WHERE vb.id = ? AND v.manager_email = ?
+            """,
+            (booking_id, user["email"]),
+        ).fetchone()
+        
+        if not booking:
+            abort(404)
+        
+        conn.execute(
+            "UPDATE venue_bookings SET status = ?, updated_at = datetime('now') WHERE id = ?",
+            ("rejected", booking_id),
+        )
+    
+    return redirect(url_for("venuehub_dashboard"))
+
+
+@app.post("/creator/venues/<int:venue_id>/request")
+def creator_request_venue(venue_id: int):
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    
+    event_title = (request.form.get("event_title") or "").strip()
+    requested_date = (request.form.get("requested_date") or "").strip()
+    
+    if not event_title or not requested_date:
+        return redirect(url_for("creator_venues_page") + "?error=missing")
+    
+    with _db() as conn:
+        # Check if venue exists and is active
+        venue = conn.execute(
+            "SELECT * FROM venues WHERE id = ? AND is_active = 1",
+            (venue_id,),
+        ).fetchone()
+        
+        if not venue:
+            abort(404)
+        
+        # Create booking request
+        conn.execute(
+            """
+            INSERT INTO venue_bookings 
+            (venue_id, event_title, creator_email, requested_date, status)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (venue_id, event_title, user["email"], requested_date, "pending"),
+        )
+    
+    return redirect(url_for("creator_venues_page") + "?success=requested")
+
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    print("Starting Spotly application...")
+    print("Database initialized successfully")
+    print("Available routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"  {rule.methods} {rule.rule}")
+    print("\nStarting Flask server on http://127.0.0.1:5000")
+    print("Press Ctrl+C to stop the server")
+    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)

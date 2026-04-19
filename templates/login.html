@@ -19,6 +19,7 @@
         <div class="role-pills" aria-label="Account type">
           <button class="role-pill{% if role == 'audience' %} is-active{% endif %}" type="button" data-set-role="audience">Audience / User</button>
           <button class="role-pill{% if role == 'creator' %} is-active{% endif %}" type="button" data-set-role="creator">Creator / Talent</button>
+          <button class="role-pill{% if role == 'venue_manager' %} is-active{% endif %}" type="button" data-set-role="venue_manager">Venue Manager</button>
         </div>
 
         <form class="auth" method="post" action="/login">

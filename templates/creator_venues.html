@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Venues - Spotly{% endblock %}
+
+{% block brand_href %}/creator{% endblock %}
+
+{% block nav_links %}
+  {% if user %}
+    {% if user.role == 'audience' %}
+      <a href="/customer" class="nav__link">Customer</a>
+      <a href="/bookings" class="nav__link">Bookings</a>
+    {% elif user.role == 'creator' %}
+      <a href="/creator" class="nav__link">Creator</a>
+      <a href="/creator/venues" class="nav__link">Venues</a>
+    {% elif user.role == 'venue_manager' %}
+      <a href="/venuehub" class="nav__link">VenueHub</a>
+    {% endif %}
+  {% endif %}
+  <a href="/featured-shows" class="nav__link">Featured shows</a>
+  <a href="/live-shows" class="nav__link">Live shows</a>
+  <a href="/testimonials" class="nav__link">Testimonials</a>
+{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Browse venues">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Browse Venues</h2>
+      <p class="lead">Discover perfect venues for your events from our trusted venue managers.</p>
+    </div>
+
+    <div class="venues-container" data-animate="fade-up" data-delay="120">
+      {% if venues and venues|length > 0 %}
+        <div class="venues-grid">
+          {% for venue in venues %}
+            <div class="venue-card" data-animate="fade-up">
+              <div class="venue-card__image">
+                {% if venue.images %}
+                  <img src="{{ venue.images.split(',')[0] }}" alt="{{ venue.name }}">
+                {% else %}
+                  <div class="venue-card__placeholder">No image</div>
+                {% endif %}
+              </div>
+              <div class="venue-card__content">
+                <div class="venue-card__header">
+                  <h3 class="venue-card__name">{{ venue.name }}</h3>
+                  <span class="venue-card__manager">by {{ venue.manager_name }}</span>
+                </div>
+                <div class="venue-card__meta">
+                  <span class="venue-card__location">{{ venue.city }}</span>
+                  <span class="venue-card__address">{{ venue.address }}</span>
+                </div>
+                <div class="venue-card__specs">
+                  <div class="venue-card__spec">
+                    <span class="venue-card__spec-label">Capacity</span>
+                    <span class="venue-card__spec-value">{{ venue.capacity }}</span>
+                  </div>
+                  <div class="venue-card__spec">
+                    <span class="venue-card__spec-label">Price/Day</span>
+                    <span class="venue-card__spec-value">Rs {{ venue.price_per_day }}</span>
+                  </div>
+                  <div class="venue-card__spec">
+                    <span class="venue-card__spec-label">Price/Hour</span>
+                    <span class="venue-card__spec-value">Rs {{ venue.price_per_hour }}</span>
+                  </div>
+                </div>
+                {% if venue.amenities %}
+                  <div class="venue-card__amenities">
+                    {% for amenity in venue.amenities.split(',') %}
+                      <span class="amenity-tag">{{ amenity.title() }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                <div class="venue-card__description">
+                  <p>{{ venue.description[:100] }}{% if venue.description|length > 100 %}...{% endif %}</p>
+                </div>
+                <div class="venue-card__actions">
+                  <button class="btn btn--primary" onclick="selectVenue({{ venue.id }}, '{{ venue.name|e }}', '{{ venue.city|e }}')">Select This Venue</button>
+                  <button class="btn btn--ghost" onclick="viewVenueDetails({{ venue.id }})">View Details</button>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if pagination and pagination.pages > 1 %}
+          <nav class="pagination" aria-label="Pagination">
+            <a class="pagination__link{% if not pagination.has_prev %} is-disabled{% endif %}" {% if pagination.has_prev %}href="?page={{ pagination.prev_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Previous</a>
+            <div class="pagination__pages" role="list">
+              {% for n in pagination.page_numbers %}
+                <a class="pagination__page{% if n == pagination.page %} is-active{% endif %}" role="listitem" href="?page={{ n }}&per_page={{ pagination.per_page }}" {% if n == pagination.page %}aria-current="page"{% endif %}>{{ n }}</a>
+              {% endfor %}
+            </div>
+            <a class="pagination__link{% if not pagination.has_next %} is-disabled{% endif %}" {% if pagination.has_next %}href="?page={{ pagination.next_page }}&per_page={{ pagination.per_page }}"{% else %}aria-disabled="true" tabindex="-1"{% endif %}>Next</a>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="empty" aria-label="Empty state">
+          <div class="empty__icon" aria-hidden="true"> buildings</div>
+          <div class="empty__title">No venues available</div>
+          <div class="empty__sub">Check back later for new venue listings from our managers.</div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}
+
+{% block head %}
+<style>
+.venues-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 18px;
+}
+
+.venue-card__header {
+  margin-bottom: 12px;
+}
+
+.venue-card__manager {
+  font-size: 12px;
+  color: rgba(233,233,255,.6);
+  font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+
+.venue-card__amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.amenity-tag {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(38,181,255,.1);
+  border: 1px solid rgba(38,181,255,.2);
+  color: rgba(38,181,255,.9);
+  font-weight: 600;
+}
+
+.venue-card__description {
+  margin: 12px 0;
+  font-size: 13px;
+  color: rgba(233,233,255,.7);
+  line-height: 1.4;
+}
+
+.venue-card__actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.venue-card__actions .btn {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 768px) {
+  .venue-card__actions {
+    flex-direction: column;
+  }
+  
+  .venue-card__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Store selected venue in session storage for use in event creation
+  function selectVenue(venueId, venueName, venueCity) {
+    const selectedVenue = {
+      id: venueId,
+      name: venueName,
+      city: venueCity
+    };
+    
+    // Store in session storage
+    sessionStorage.setItem('selectedVenue', JSON.stringify(selectedVenue));
+    
+    // Redirect to creator dashboard
+    window.location.href = '/creator';
+  }
+  
+  function viewVenueDetails(venueId) {
+    // This could open a modal or go to a detailed venue page
+    // Feature coming soon - for now just log the venue ID
+    console.log('Venue details requested for ID:', venueId);
+  }
+</script>
+{% endblock %}

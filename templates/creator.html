@@ -11,6 +11,9 @@
         <div class="dash__title">
           <h2 class="h2">Creator dashboard</h2>
           <p class="lead">Logged in as <strong>{{ user_email }}</strong>. Manage events, bookings, and performance.</p>
+          <div style="margin-top: 12px;">
+            <a href="/creator/venues" class="btn btn--ghost btn--sm">Browse Available Venues</a>
+          </div>
         </div>
 
         <div class="dash__stats" aria-label="Top stats">
@@ -68,7 +71,13 @@
                 </label>
                 <label class="field">
                   <span class="field__label">Venue</span>
-                  <input class="field__input" type="text" name="venue" required>
+                  <div class="venue-input-group">
+                    <input class="field__input" type="text" name="venue" id="venue-input" required placeholder="Enter venue name or browse venues">
+                    <button type="button" class="btn btn--ghost btn--sm" onclick="browseVenues()">Browse Venues</button>
+                  </div>
+                  <div id="selected-venue-info" class="selected-venue-info" style="display: none;">
+                    <small>Selected: <span id="selected-venue-name"></span> in <span id="selected-venue-city"></span></small>
+                  </div>
                 </label>
                 <label class="field">
                   <span class="field__label">Thumbnail</span>
@@ -262,6 +271,86 @@
 {% endblock %}
 
 {% block scripts %}
+  <style>
+    .venue-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .venue-input-group .field__input {
+      flex: 1;
+    }
+
+    .btn--sm {
+      padding: 8px 12px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .selected-venue-info {
+      margin-top: 6px;
+      padding: 8px;
+      background: rgba(38,181,255,.1);
+      border: 1px solid rgba(38,181,255,.2);
+      border-radius: 8px;
+      color: rgba(38,181,255,.9);
+      font-size: 12px;
+    }
+
+    @media (max-width: 640px) {
+      .venue-input-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .btn--sm {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    // Load selected venue from session storage if available
+    document.addEventListener('DOMContentLoaded', function() {
+      const selectedVenue = sessionStorage.getItem('selectedVenue');
+      if (selectedVenue) {
+        const venue = JSON.parse(selectedVenue);
+        updateVenueSelection(venue);
+      }
+    });
+
+    function browseVenues() {
+      // Redirect to venues page
+      window.location.href = '/creator/venues';
+    }
+
+    function updateVenueSelection(venue) {
+      const venueInput = document.getElementById('venue-input');
+      const venueInfo = document.getElementById('selected-venue-info');
+      const venueName = document.getElementById('selected-venue-name');
+      const venueCity = document.getElementById('selected-venue-city');
+      
+      // Update the venue input field
+      venueInput.value = `${venue.name}, ${venue.city}`;
+      
+      // Show selected venue info
+      venueName.textContent = venue.name;
+      venueCity.textContent = venue.city;
+      venueInfo.style.display = 'block';
+      
+      // Clear session storage after using
+      sessionStorage.removeItem('selectedVenue');
+    }
+
+    // Listen for messages from venue selection window (if opened in new tab)
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'venueSelected') {
+        updateVenueSelection(event.data.venue);
+      }
+    });
+  </script>
+
   <script>
     (() => {
       const btn = document.querySelector('[data-copy-link]');
