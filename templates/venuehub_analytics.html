@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block title %}Venue Analytics - Spotly{% endblock %}
+
+{% block brand_href %}/venuehub{% endblock %}
+
+{% block content %}
+  <section class="section" aria-label="Venue analytics">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">Venue Revenue Analytics</h2>
+      <p class="lead">Track your venue performance and booking revenue</p>
+    </div>
+
+    <!-- Revenue Overview Cards -->
+    <div class="analytics-grid" data-animate="fade-up" data-delay="120">
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <h3>Total Revenue</h3>
+          <div class="analytics-card__icon">💰</div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__value">₹{{ analytics.total_revenue | default(0) }}</div>
+          <div class="analytics-card__change {% if analytics.revenue_change > 0 %}positive{% else %}negative{% endif %}">
+            {% if analytics.revenue_change > 0 %}↑{% else %}↓{% endif %} {{ analytics.revenue_change | default(0) }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <h3>Total Bookings</h3>
+          <div class="analytics-card__icon">📅</div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__value">{{ analytics.total_bookings | default(0) }}</div>
+          <div class="analytics-card__change {% if analytics.bookings_change > 0 %}positive{% else %}negative{% endif %}">
+            {% if analytics.bookings_change > 0 %}↑{% else %}↓{% endif %} {{ analytics.bookings_change | default(0) }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <h3>Avg. Daily Rate</h3>
+          <div class="analytics-card__icon">📊</div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__value">₹{{ analytics.avg_daily_rate | default(0) }}</div>
+          <div class="analytics-card__subtitle">Per day</div>
+        </div>
+      </div>
+
+      <div class="analytics-card">
+        <div class="analytics-card__header">
+          <h3>Occupancy Rate</h3>
+          <div class="analytics-card__icon">🏢</div>
+        </div>
+        <div class="analytics-card__body">
+          <div class="analytics-card__value">{{ analytics.occupancy_rate | default(0) }}%</div>
+          <div class="analytics-card__subtitle">{{ analytics.occupancy_status | default('Good') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue by Venue -->
+    <div class="analytics-section" data-animate="fade-up" data-delay="240">
+      <h3 class="h3">Revenue by Venue</h3>
+      <div class="venues-grid">
+        {% for venue in analytics.venues %}
+        <div class="venue-card">
+          <div class="venue-card__header">
+            <h4>{{ venue.name }}</h4>
+            <div class="venue-card__city">{{ venue.city }}</div>
+          </div>
+          <div class="venue-card__metrics">
+            <div class="venue-metric">
+              <div class="venue-metric__value">₹{{ venue.revenue }}</div>
+              <div class="venue-metric__label">Revenue</div>
+            </div>
+            <div class="venue-metric">
+              <div class="venue-metric__value">{{ venue.bookings }}</div>
+              <div class="venue-metric__label">Bookings</div>
+            </div>
+            <div class="venue-metric">
+              <div class="venue-metric__value">{{ venue.days_booked }}</div>
+              <div class="venue-metric__label">Days Booked</div>
+            </div>
+          </div>
+          <div class="venue-card__performance">
+            <div class="performance-bar">
+              <div class="performance-bar__fill" style="width: {{ venue.performance_score }}%"></div>
+            </div>
+            <div class="performance-label">{{ venue.performance_grade }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Booking Requests Trend -->
+    <div class="analytics-section" data-animate="fade-up" data-delay="360">
+      <h3 class="h3">Booking Requests Trend</h3>
+      <div class="chart-container">
+        <canvas id="bookingChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Top Performing Venues -->
+    <div class="analytics-section" data-animate="fade-up" data-delay="480">
+      <h3 class="h3">Top Performing Venues</h3>
+      <div class="venues-table">
+        <div class="venues-table__header">
+          <div>Venue</div>
+          <div>Revenue</div>
+          <div>Bookings</div>
+          <div>Occupancy</div>
+          <div>Rating</div>
+        </div>
+        {% for venue in analytics.top_venues %}
+        <div class="venues-table__row">
+          <div class="venues-table__name">
+            <div class="venue-name">{{ venue.name }}</div>
+            <div class="venue-city">{{ venue.city }}</div>
+          </div>
+          <div class="venues-table__revenue">₹{{ venue.revenue }}</div>
+          <div class="venues-table__bookings">{{ venue.bookings }}</div>
+          <div class="venues-table__occupancy">{{ venue.occupancy_rate }}%</div>
+          <div class="venues-table__rating {% if venue.rating >= 4.5 %}excellent{% elif venue.rating >= 3.5 %}good{% else %}average{% endif %}">
+            {{ venue.rating }}/5 ⭐
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Recent Booking Requests -->
+    <div class="analytics-section" data-animate="fade-up" data-delay="600">
+      <h3 class="h3">Recent Booking Requests</h3>
+      <div class="requests-list">
+        {% for request in analytics.recent_requests %}
+        <div class="request-item">
+          <div class="request-item__venue">{{ request.venue_name }}</div>
+          <div class="request-item__event">{{ request.event_title }}</div>
+          <div class="request-item__date">{{ request.requested_date }}</div>
+          <div class="request-item__amount">₹{{ request.amount }}</div>
+          <div class="request-item__status {{ request.status_class }}">
+            {{ request.status }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block head %}
+<style>
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.analytics-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+}
+
+.analytics-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.analytics-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.analytics-card__header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(233, 233, 255, 0.9);
+  margin: 0;
+}
+
+.analytics-card__icon {
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.analytics-card__body {
+  text-align: center;
+}
+
+.analytics-card__value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.analytics-card__subtitle {
+  font-size: 14px;
+  color: rgba(233, 233, 255, 0.7);
+}
+
+.analytics-card__change {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.analytics-card__change.positive {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a945;
+}
+
+.analytics-card__change.negative {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.analytics-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(20px);
+}
+
+.chart-container {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.venues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.venue-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.venue-card__header {
+  margin-bottom: 16px;
+}
+
+.venue-card__header h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 4px 0;
+}
+
+.venue-card__city {
+  font-size: 14px;
+  color: rgba(233, 233, 255, 0.7);
+}
+
+.venue-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.venue-metric {
+  text-align: center;
+}
+
+.venue-metric__value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.venue-metric__label {
+  font-size: 12px;
+  color: rgba(233, 233, 255, 0.7);
+}
+
+.venue-card__performance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.performance-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.performance-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a945, #20c997);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.performance-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(233, 233, 255, 0.9);
+}
+
+.venues-table {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.venues-table__header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  color: rgba(233, 233, 255, 0.9);
+}
+
+.venues-table__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.venues-table__name {
+  font-weight: 600;
+  color: #fff;
+}
+
+.venues-table__revenue,
+.venues-table__bookings,
+.venues-table__occupancy {
+  text-align: center;
+  color: rgba(233, 233, 255, 0.9);
+}
+
+.venues-table__rating {
+  text-align: center;
+  font-weight: 600;
+}
+
+.venues-table__rating.excellent {
+  color: #28a945;
+}
+
+.venues-table__rating.good {
+  color: #ffc107;
+}
+
+.venues-table__rating.average {
+  color: #dc3545;
+}
+
+.requests-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.request-item {
+  display: grid;
+  grid-template-columns: 2fr 2fr 120px 100px 120px;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.request-item__venue {
+  font-weight: 600;
+  color: #fff;
+}
+
+.request-item__event,
+.request-item__date,
+.request-item__amount {
+  color: rgba(233, 233, 255, 0.9);
+}
+
+.request-item__status {
+  text-align: center;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.request-item__status.approved {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a945;
+}
+
+.request-item__status.pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.request-item__status.rejected {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+@media (max-width: 768px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .venues-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .venues-table__header,
+  .venues-table__row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .request-item {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Booking requests trend chart
+const ctx = document.getElementById('bookingChart').getContext('2d');
+const bookingChart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: {{ analytics.chart_labels | tojson }},
+    datasets: [{
+      label: 'Booking Requests',
+      data: {{ analytics.chart_data | tojson }},
+      backgroundColor: [
+        'rgba(124, 58, 237, 0.8)',
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(255, 193, 7, 0.8)',
+        'rgba(220, 53, 69, 0.8)'
+      ],
+      borderColor: [
+        '#7c3aed',
+        '#22c55e',
+        '#ffc107',
+        '#dc3545'
+      ],
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        },
+        ticks: {
+          color: 'rgba(233, 233, 255, 0.7)'
+        }
+      },
+      y: {
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)'
+        },
+        ticks: {
+          color: 'rgba(233, 233, 255, 0.7)'
+        }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

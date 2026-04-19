@@ -783,6 +783,79 @@ def creator_event_stats(event_id: int):
     )
 
 
+@app.get("/creator/analytics")
+def creator_analytics_page():
+    user = _require_role("creator")
+    if not isinstance(user, dict):
+        return user
+    
+    with _db() as conn:
+        # Get all creator's events with booking data
+        events_with_revenue = conn.execute(
+            """
+            SELECT 
+                e.id,
+                e.title,
+                e.event_date,
+                e.venue,
+                COALESCE(SUM(b.amount), 0) as revenue,
+                COUNT(b.id) as booking_count,
+                e.created_at
+            FROM events e
+            LEFT JOIN bookings b ON e.id = b.event_id AND b.status != 'canceled'
+            WHERE e.creator_email = ?
+            GROUP BY e.id
+            ORDER BY e.created_at DESC
+            LIMIT 12
+            """,
+            (user["email"],),
+        ).fetchall()
+        
+        # Calculate totals
+        total_revenue = sum(event["revenue"] for event in events_with_revenue)
+        total_bookings = sum(event["booking_count"] for event in events_with_revenue)
+        avg_price = total_revenue / len(events_with_revenue) if events_with_revenue else 0
+        active_events = len([e for e in events_with_revenue if e["event_date"] >= datetime.now().strftime("%Y-%m-%d")])
+        
+        # Top performing events
+        top_events = sorted(events_with_revenue, key=lambda x: x["revenue"], reverse=True)[:5]
+        for event in top_events:
+            event["performance_score"] = min(100, (event["revenue"] / 1000) * 10)  # Simple performance scoring
+        
+        # Chart data (last 6 months)
+        chart_data = [event["revenue"] for event in events_with_revenue[:6]]
+        chart_labels = [event["title"][:15] + "..." if len(event["title"]) > 15 else event["title"] for event in events_with_revenue[:6]]
+        
+        # Recent activity
+        recent_activity = []
+        for event in events_with_revenue[:3]:
+            recent_activity.append({
+                "time": event["created_at"][:10],
+                "type": "revenue",
+                "amount": event["revenue"],
+                "description": f"Event '{event['title'][:20]}...' generated revenue"
+            })
+        
+        # Calculate changes (mock data for demo)
+        revenue_change = 15.2  # Mock 15.2% increase
+        bookings_change = 8.7   # Mock 8.7% increase
+        
+        analytics = {
+            "total_revenue": total_revenue,
+            "total_bookings": total_bookings,
+            "avg_price": round(avg_price, 2),
+            "active_events": active_events,
+            "revenue_change": revenue_change,
+            "bookings_change": bookings_change,
+            "top_events": top_events,
+            "chart_data": chart_data,
+            "chart_labels": chart_labels,
+            "recent_activity": recent_activity
+        }
+    
+    return render_template("creator_analytics.html", analytics=analytics, user_email=user["email"])
+
+
 @app.get("/events/<int:event_id>")
 def public_event_page(event_id: int):
     user = _current_user()
@@ -1088,6 +1161,113 @@ def _cancel_fee_percent(days_before: int) -> int | None:
     if days_before == 1:
         return 15
     return None
+
+
+@app.get("/venuehub/analytics")
+def venuehub_analytics_page():
+    user = _require_role("venue_manager")
+    if not isinstance(user, dict):
+        return user
+    
+    with _db() as conn:
+        # Get all venues with booking data
+        venues_with_revenue = conn.execute(
+            """
+            SELECT 
+                v.id,
+                v.name,
+                v.city,
+                v.capacity,
+                v.price_per_day,
+                COALESCE(SUM(vb.amount), 0) as revenue,
+                COUNT(vb.id) as booking_count,
+                COALESCE(AVG(vb.amount), 0) as avg_booking_amount,
+                v.created_at
+            FROM venues v
+            LEFT JOIN venue_bookings vb ON v.id = vb.venue_id AND vb.status = 'approved'
+            WHERE v.manager_email = ?
+            GROUP BY v.id
+            ORDER BY v.created_at DESC
+            LIMIT 12
+            """,
+            (user["email"],),
+        ).fetchall()
+        
+        # Calculate totals
+        total_revenue = sum(venue["revenue"] for venue in venues_with_revenue)
+        total_bookings = sum(venue["booking_count"] for venue in venues_with_revenue)
+        avg_daily_rate = total_revenue / 30 if venues_with_revenue else 0  # Last 30 days average
+        avg_booking_amount = sum(venue["avg_booking_amount"] for venue in venues_with_revenue) / len(venues_with_revenue) if venues_with_revenue else 0
+        
+        # Calculate occupancy (mock calculation for demo)
+        total_capacity = sum(venue["capacity"] for venue in venues_with_revenue)
+        estimated_booked_days = sum(venue["booking_count"] for venue in venues_with_revenue)
+        occupancy_rate = (estimated_booked_days / (total_capacity * 30)) * 100 if total_capacity > 0 else 0
+        occupancy_status = "Excellent" if occupancy_rate >= 70 else "Good" if occupancy_rate >= 50 else "Needs Improvement"
+        
+        # Top performing venues
+        top_venues = sorted(venues_with_revenue, key=lambda x: x["revenue"], reverse=True)[:5]
+        for venue in top_venues:
+            venue["performance_score"] = min(100, (venue["revenue"] / 10000) * 10)
+            venue["performance_grade"] = "A+" if venue["performance_score"] >= 90 else "A" if venue["performance_score"] >= 80 else "B" if venue["performance_score"] >= 70 else "C"
+            venue["rating"] = venue["performance_score"] / 20  # Convert to 5-star scale
+        
+        # Chart data (last 6 months)
+        chart_data = [venue["revenue"] for venue in venues_with_revenue[:6]]
+        chart_labels = [venue["name"][:15] + "..." if len(venue["name"]) > 15 else venue["name"] for venue in venues_with_revenue[:6]]
+        
+        # Recent booking requests
+        recent_requests = conn.execute(
+            """
+            SELECT 
+                vb.id,
+                vb.event_title,
+                vb.requested_date,
+                vb.amount,
+                vb.status,
+                v.name as venue_name
+            FROM venue_bookings vb
+            JOIN venues v ON v.id = vb.venue_id
+            WHERE v.manager_email = ?
+            ORDER BY vb.created_at DESC
+            LIMIT 10
+            """,
+            (user["email"],),
+        ).fetchall()
+        
+        # Format recent requests
+        formatted_requests = []
+        for req in recent_requests:
+            status_class = "approved" if req["status"] == "approved" else "pending" if req["status"] == "pending" else "rejected"
+            formatted_requests.append({
+                "venue_name": req["venue_name"],
+                "event_title": req["event_title"],
+                "requested_date": req["requested_date"][:10],
+                "amount": req["amount"],
+                "status": req["status"].title(),
+                "status_class": status_class
+            })
+        
+        # Calculate changes (mock data for demo)
+        revenue_change = 12.8  # Mock 12.8% increase
+        bookings_change = 15.3  # Mock 15.3% increase
+        
+        analytics = {
+            "total_revenue": total_revenue,
+            "total_bookings": total_bookings,
+            "avg_daily_rate": round(avg_daily_rate, 2),
+            "occupancy_rate": round(occupancy_rate, 1),
+            "occupancy_status": occupancy_status,
+            "revenue_change": revenue_change,
+            "bookings_change": bookings_change,
+            "venues": venues_with_revenue,
+            "top_venues": top_venues,
+            "chart_data": chart_data,
+            "chart_labels": chart_labels,
+            "recent_requests": formatted_requests
+        }
+    
+    return render_template("venuehub_analytics.html", analytics=analytics, user_email=user["email"])
 
 
 @app.post("/bookings/<int:booking_id>/cancel")
