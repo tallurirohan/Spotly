@@ -370,35 +370,83 @@ def _pagination_model(page: int, per_page: int, total: int) -> dict:
     }
 
 
+SIGNUP_REGISTER = {
+    "audience": {
+        "icon": "🎫",
+        "badge": "Audience",
+        "title": "Join as an attendee",
+        "subtitle": "Discover shows and book tickets in one place.",
+        "name_label": "Full name",
+        "name_placeholder": "Your full name",
+        "email_placeholder": "you@email.com",
+        "submit": "Create account",
+    },
+    "creator": {
+        "icon": "🎤",
+        "badge": "Creator",
+        "title": "Join as a creator",
+        "subtitle": "Publish events and grow your audience.",
+        "name_label": "Creator name",
+        "name_placeholder": "Stage name or brand",
+        "email_placeholder": "creator@yourbrand.com",
+        "submit": "Create creator account",
+    },
+    "venue_manager": {
+        "icon": "🏛️",
+        "badge": "Venue",
+        "title": "Join as a venue",
+        "subtitle": "List your space and manage bookings.",
+        "name_label": "Venue name",
+        "name_placeholder": "Venue or company name",
+        "email_placeholder": "venue@yourcompany.com",
+        "submit": "Create venue account",
+    },
+}
+
+
+def _signup_register_page(role: str):
+    meta = SIGNUP_REGISTER.get(role)
+    if not meta:
+        return redirect(url_for("signup_page"))
+    return render_template(
+        "signup_register.html",
+        role=role,
+        error=request.args.get("error"),
+        **meta,
+    )
+
+
+@app.get("/signup-role")
+def signup_role_selection_page():
+    return redirect(url_for("signup_page"))
+
+
+@app.get("/signup-audience")
+def signup_audience_page():
+    return _signup_register_page("audience")
+
+
+@app.get("/signup-creator")
+def signup_creator_page():
+    return _signup_register_page("creator")
+
+
+@app.get("/signup-venue")
+@app.get("/signup-venue_manager")
+def signup_venue_page():
+    return _signup_register_page("venue_manager")
+
+
 @app.get("/signup")
 def signup_page():
     return render_template("signup.html")
 
 
-@app.get("/signup/audience")
-def signup_audience_page():
-    role = "audience"
-    error = request.args.get("error")
-    return render_template("signup_audience.html", role=role, error=error)
-
-
-@app.get("/signup/creator")
-def signup_creator_page():
-    role = "creator"
-    error = request.args.get("error")
-    return render_template("signup_creator.html", role=role, error=error)
-
-
-@app.get("/signup/venue_manager")
-def signup_venue_manager_page():
-    role = "venue_manager"
-    error = request.args.get("error")
-    return render_template("signup_venue_manager.html", role=role, error=error)
-
-
 @app.get("/login")
 def login_page():
     role = (request.args.get("role") or "audience").strip().lower()
+    if role == "venue":
+        role = "venue_manager"
     if role not in ("audience", "creator", "venue_manager"):
         role = "audience"
     error = request.args.get("error")
@@ -1321,31 +1369,29 @@ def signup():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     role = (request.form.get("role") or "").strip().lower()
+    if role == "venue":
+        role = "venue_manager"
 
     signup_redirect = url_for("signup_page")
     if role == "audience":
         signup_redirect = url_for("signup_audience_page")
-    if role == "creator":
+    elif role == "creator":
         signup_redirect = url_for("signup_creator_page")
-    if role == "venue_manager":
-        signup_redirect = url_for("signup_venue_manager_page")
+    elif role == "venue_manager":
+        signup_redirect = url_for("signup_venue_page")
 
-    # Comprehensive validation
     if role not in ("audience", "creator", "venue_manager"):
         return redirect(url_for("signup_page") + "?error=role")
     if not name or not email or not password:
         return redirect(signup_redirect + "?error=missing")
-    
-    # Validate email format
+
     if not _validate_email(email):
         return redirect(signup_redirect + "?error=email")
-    
-    # Validate password strength
+
     is_valid_password, password_error = _validate_password(password)
     if not is_valid_password:
         return redirect(signup_redirect + "?error=password")
-    
-    # Validate name length
+
     if len(name) < 2 or len(name) > 100:
         return redirect(signup_redirect + "?error=name")
 
@@ -1353,7 +1399,7 @@ def signup():
 
     try:
         with _db() as conn:
-            conn.execute(   
+            conn.execute(
                 "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
                 (name, email, pw_hash, role),
             )
@@ -1370,6 +1416,8 @@ def login():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     role = (request.form.get("role") or "").strip().lower()
+    if role == "venue":
+        role = "venue_manager"
     if role not in ("audience", "creator", "venue_manager"):
         role = "audience"
     with _db() as conn:

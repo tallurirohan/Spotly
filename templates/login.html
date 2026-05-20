@@ -1,42 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}Spotly — Login{% endblock %}
+{% block title %}Login — Eventra{% endblock %}
+{% block body_class %}main--auth{% endblock %}
+
+{% block nav_links %}{% endblock %}
 
 {% block content %}
-  <section class="section" aria-label="Login">
-      <div class="section__head" data-animate="fade-up">
-        <h2 class="h2">Login</h2>
-        <p class="lead">Continue to your profile.</p>
+  <section class="auth-page auth-page--split" aria-label="Login">
+    <div class="auth-page__intro" data-animate="fade-up">
+      <p class="auth-page__eyebrow">Welcome back</p>
+      <h1 class="auth-page__title">Pick up where you left off</h1>
+      <p class="auth-page__text">Sign in to manage bookings, events, or your venue dashboard.</p>
+      <ul class="auth-page__list">
+        <li>Book tickets and track orders</li>
+        <li>Publish and manage live shows</li>
+        <li>Run venue listings and bookings</li>
+      </ul>
+    </div>
+
+    <div class="auth-shell" data-animate="fade-up" data-delay="120">
+      <div class="auth-shell__head">
+        <h2 class="h2">Sign in</h2>
+        <p class="lead">Choose your account type and enter your credentials.</p>
       </div>
 
-      <div class="auth-shell" data-animate="fade-up" data-delay="120">
-        {% if error == 'login' %}
-          <div class="modal__fine">Incorrect email or password.</div>
-        {% elif error == 'role' %}
-          <div class="modal__fine">That email is registered under a different account type.</div>
-        {% endif %}
+      {% if error == 'login' %}
+        <div class="alert alert--error">Incorrect email or password.</div>
+      {% elif error == 'role' %}
+        <div class="alert alert--error">That email is registered under a different account type.</div>
+      {% endif %}
 
-        <div class="role-pills" aria-label="Account type">
-          <button class="role-pill{% if role == 'audience' %} is-active{% endif %}" type="button" data-set-role="audience">Audience / User</button>
-          <button class="role-pill{% if role == 'creator' %} is-active{% endif %}" type="button" data-set-role="creator">Creator / Talent</button>
-          <button class="role-pill{% if role == 'venue_manager' %} is-active{% endif %}" type="button" data-set-role="venue_manager">Venue Manager</button>
-        </div>
-
-        <form class="auth" method="post" action="/login">
-          <input type="hidden" name="role" value="{{ role }}" data-role-hidden required>
-          <label class="field">
-            <span class="field__label">Email</span>
-            <input class="field__input" type="email" name="email" autocomplete="email" required>
-          </label>
-          <label class="field">
-            <span class="field__label">Password</span>
-            <input class="field__input" type="password" name="password" autocomplete="current-password" required>
-          </label>
-          <button class="btn btn--primary" type="submit">Login</button>
-        </form>
-        <div class="modal__fine">New here? <a class="nav__link" href="/signup">Create an account</a></div>
+      <div class="role-pills" aria-label="Account type">
+        <button class="role-pill{% if role == 'audience' %} is-active{% endif %}" type="button" data-set-role="audience">Audience</button>
+        <button class="role-pill{% if role == 'creator' %} is-active{% endif %}" type="button" data-set-role="creator">Creator</button>
+        <button class="role-pill{% if role == 'venue_manager' %} is-active{% endif %}" type="button" data-set-role="venue_manager">Venue</button>
       </div>
-    </section>
+
+      <form class="auth" method="post" action="/login">
+        <input type="hidden" name="role" value="{{ role }}" data-role-hidden required>
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input class="field__input" type="email" name="email" autocomplete="email" placeholder="you@email.com" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Password</span>
+          <input class="field__input" type="password" name="password" autocomplete="current-password" placeholder="Your password" required>
+        </label>
+        <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+      </form>
+
+      <p class="auth__foot">New here? <a href="/signup">Create an account</a></p>
+    </div>
+  </section>
 
   <script>
     (() => {

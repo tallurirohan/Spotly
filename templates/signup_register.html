@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Eventra{% endblock %}
+{% block body_class %}main--auth{% endblock %}
+
+{% block nav_links %}{% endblock %}
+
+{% block content %}
+  <section class="auth-page auth-page--split" aria-label="Create account">
+    <div class="auth-page__intro" data-animate="fade-up">
+      <p class="auth-page__eyebrow">{{ badge }} account</p>
+      <h1 class="auth-page__title">{{ title }}</h1>
+      <p class="auth-page__text">{{ subtitle }}</p>
+    </div>
+
+    <div class="signup-flow" data-animate="fade-up" data-delay="120">
+      <div class="signup-flow__steps" aria-hidden="true">
+        <div class="signup-step is-done">
+          <span class="signup-step__dot">1</span>
+          <span class="signup-step__label">Role</span>
+        </div>
+        <div class="signup-step is-active">
+          <span class="signup-step__dot">2</span>
+          <span class="signup-step__label">Details</span>
+        </div>
+        <div class="signup-step">
+          <span class="signup-step__dot">3</span>
+          <span class="signup-step__label">Done</span>
+        </div>
+      </div>
+
+      <div class="auth-shell">
+        <div class="role-badge"><span>{{ icon }}</span><span>{{ badge }}</span></div>
+
+        {% if error == 'missing' %}
+          <div class="alert alert--error">Please fill in all required fields.</div>
+        {% elif error == 'exists' %}
+          <div class="alert alert--error">An account with this email already exists.</div>
+        {% elif error %}
+          <div class="alert alert--error">Something went wrong. Please try again.</div>
+        {% endif %}
+
+        <form class="auth" method="post" action="/signup">
+          <input type="hidden" name="role" value="{{ role }}">
+          <label class="field">
+            <span class="field__label">{{ name_label }}</span>
+            <input class="field__input" type="text" name="name" placeholder="{{ name_placeholder }}" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Email</span>
+            <input class="field__input" type="email" name="email" autocomplete="email" placeholder="{{ email_placeholder }}" required>
+          </label>
+          <label class="field">
+            <span class="field__label">Password</span>
+            <input class="field__input" type="password" name="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required>
+          </label>
+          <button class="btn btn--primary btn--block" type="submit">{{ submit }}</button>
+        </form>
+
+        <p class="auth__foot"><a href="/signup">← Choose a different role</a></p>
+      </div>
+    </div>
+  </section>
+{% endblock %}

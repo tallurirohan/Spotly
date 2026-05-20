@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <div class="bg">
     <div class="bg__grid"></div>
     <div class="bg__glow bg__glow--a"></div>
@@ -37,10 +37,11 @@
             {% elif user.role == 'venue_manager' %}
               <a href="/venuehub" class="nav__link">VenueHub</a>
             {% endif %}
+          {% else %}
+            <a href="/#how" class="nav__link">How it works</a>
+            <a href="/featured-shows" class="nav__link">Shows</a>
+            <a href="/testimonials" class="nav__link">Stories</a>
           {% endif %}
-          <a href="/featured-shows" class="nav__link">Featured shows</a>
-          <a href="/live-shows" class="nav__link">Live shows</a>
-          <a href="/testimonials" class="nav__link">Testimonials</a>
         {% endblock %}
       </div>
 

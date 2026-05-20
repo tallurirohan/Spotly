@@ -1,190 +1,188 @@
 {% extends "base.html" %}
 
-{% block title %}Spotly — Social Talent Booking{% endblock %}
-
+{% block title %}Eventra — Social Talent Booking{% endblock %}
+{% block body_class %}main--home{% endblock %}
 {% block brand_href %}#top{% endblock %}
-
 {% block main_attrs %}id="top"{% endblock %}
 
 {% block content %}
-    <section class="hero" aria-label="Hero">
-      <div class="hero__stage" aria-hidden="true">
-        <div class="scene" data-parallax>
-          <div class="scene__phone">
-            <div class="phone">
-              <div class="phone__top"></div>
-              <div class="phone__screen">
-                <div class="phone__chip"></div>
-                <div class="phone__lines"></div>
-                <div class="phone__reel"></div>
+  <section class="hero hero--modern" aria-label="Hero">
+    <div class="hero__stage" aria-hidden="true">
+      <div class="scene" data-parallax data-phone-showcase>
+        <div class="scene__ring" aria-hidden="true"></div>
+        <div class="scene__portal"></div>
+
+        <div class="scene__chips" aria-hidden="true">
+          <span class="scene-chip scene-chip--a">♪</span>
+          <span class="scene-chip scene-chip--b">🎤</span>
+          <span class="scene-chip scene-chip--c">✦</span>
+          <span class="scene-chip scene-chip--d">🎟</span>
+        </div>
+
+        <div class="scene__phone">
+          <div class="phone">
+            <div class="phone__bezel-glow" aria-hidden="true"></div>
+            <div class="phone__notch" aria-hidden="true"></div>
+            <div class="phone__screen">
+              <header class="phone__header">
+                <span class="phone__live"><span class="phone__live-dot"></span>Live nearby</span>
+                <span class="phone__screen-label">Top talent</span>
+              </header>
+              <div class="cards" data-cards-feed>
+                <article class="card is-active" data-tilt>
+                  <span class="card__shine" aria-hidden="true"></span>
+                  <span class="card__rank">#1 trending</span>
+                  <div class="card__row">
+                    <div class="card__avatar"><span class="card__avatar-ring"></span></div>
+                    <div class="card__meta">
+                      <div class="card__name">Rhea • Vocalist</div>
+                      <div class="card__tags">
+                        <span class="pill">Bollywood</span>
+                        <span class="pill">Acoustic</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card__stat card__stat--gold">★ 4.9 · 2.4k fans</div>
+                </article>
+                <article class="card" data-tilt>
+                  <span class="card__shine" aria-hidden="true"></span>
+                  <div class="card__row">
+                    <div class="card__avatar card__avatar--alt"><span class="card__avatar-ring"></span></div>
+                    <div class="card__meta">
+                      <div class="card__name">Kairo • Dancer</div>
+                      <div class="card__tags">
+                        <span class="pill pill--blue">Hip-hop</span>
+                        <span class="pill">Crew</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card__stat">12 gigs this month</div>
+                </article>
+                <article class="card" data-tilt>
+                  <span class="card__shine" aria-hidden="true"></span>
+                  <div class="card__row">
+                    <div class="card__avatar card__avatar--neon"><span class="card__avatar-ring"></span></div>
+                    <div class="card__meta">
+                      <div class="card__name">Arjun • Comedy</div>
+                      <div class="card__tags">
+                        <span class="pill pill--pink">Stand-up</span>
+                        <span class="pill">Corporate</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card__stat">From ₹15k / show</div>
+                </article>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
 
-          <div class="scene__portal"></div>
+    <div class="hero__content">
+      <div class="kicker" data-animate="fade-up">
+        <span class="kicker__dot"></span>
+        <span>Discover talent. Book live shows.</span>
+      </div>
 
-          <div class="scene__stage">
-            <div class="stage">
-              <div class="stage__lights"></div>
-              <div class="stage__floor"></div>
-            </div>
-          </div>
+      <h1 class="headline" data-animate="headline">
+        <span class="headline__line">Turn Talent Into</span>
+        <span class="headline__line headline__line--accent">Live Performances</span>
+      </h1>
 
-          <div class="performers">
-            <div class="performer performer--singer" data-performer>
-              <div class="performer__badge">Singer</div>
-              <div class="performer__body">
-                <div class="performer__head"></div>
-                <div class="performer__mic"></div>
-              </div>
-            </div>
-            <div class="performer performer--dancer" data-performer>
-              <div class="performer__badge">Dancer</div>
-              <div class="performer__body">
-                <div class="performer__head"></div>
-                <div class="performer__spark"></div>
-              </div>
-            </div>
-            <div class="performer performer--comedian" data-performer>
-              <div class="performer__badge">Comedian</div>
-              <div class="performer__body">
-                <div class="performer__head"></div>
-                <div class="performer__smile"></div>
-              </div>
-            </div>
-          </div>
+      <p class="subhead" data-animate="fade-up" data-delay="140">
+        Eventra connects audiences, creators, and venues — from discovery to sold-out shows.
+      </p>
 
-          <div class="floaters" aria-hidden="true">
-            <div class="floater floater--music">♪</div>
-            <div class="floater floater--mic">🎙</div>
-            <div class="floater floater--light">✦</div>
-            <div class="floater floater--ticket">⟡</div>
-          </div>
+      <div class="hero__ctas" data-animate="fade-up" data-delay="220">
+        <a class="btn btn--primary btn--lg" href="/signup">
+          <span class="btn__glow" aria-hidden="true"></span>
+          Get started free
+        </a>
+        <a class="btn btn--ghost btn--lg" href="/login">Sign in</a>
+      </div>
 
-          <div class="cards" aria-hidden="true">
-            <article class="card card--a" data-tilt>
-              <div class="card__avatar"></div>
-              <div class="card__meta">
-                <div class="card__name">Rhea • Vocalist</div>
-                <div class="card__tags">
-                  <span class="pill">Bollywood</span>
-                  <span class="pill">Acoustic</span>
-                </div>
-              </div>
-              <div class="card__stat">★ 4.9</div>
-            </article>
+      <div class="hero__badges" data-animate="fade-up" data-delay="280">
+        <span class="hero-badge">Verified performers</span>
+        <span class="hero-badge">Instant booking</span>
+        <span class="hero-badge">Venue management</span>
+      </div>
 
-            <article class="card card--b" data-tilt>
-              <div class="card__avatar card__avatar--alt"></div>
-              <div class="card__meta">
-                <div class="card__name">Kairo • Dancer</div>
-                <div class="card__tags">
-                  <span class="pill">Hip-hop</span>
-                  <span class="pill">Crew</span>
-                </div>
-              </div>
-              <div class="card__stat">12 gigs</div>
-            </article>
-
-            <article class="card card--c" data-tilt>
-              <div class="card__avatar card__avatar--neon"></div>
-              <div class="card__meta">
-                <div class="card__name">Arjun • Comedy</div>
-                <div class="card__tags">
-                  <span class="pill">Stand-up</span>
-                  <span class="pill">Corporate</span>
-                </div>
-              </div>
-              <div class="card__stat">₹ 15k+</div>
-            </article>
-          </div>
+      <div class="hero__stats" data-animate="fade-up" data-delay="320">
+        <div class="stat">
+          <div class="stat__num"><span data-count="2400">0</span>+</div>
+          <div class="stat__label">Performers</div>
+        </div>
+        <div class="stat">
+          <div class="stat__num">₹ <span data-count="35">0</span>L+</div>
+          <div class="stat__label">Paid to creators</div>
+        </div>
+        <div class="stat">
+          <div class="stat__num"><span data-count="18">0</span></div>
+          <div class="stat__label">Cities active</div>
         </div>
       </div>
 
-      <div class="hero__content">
-        <div class="kicker" data-animate="fade-up">
-          <span class="kicker__dot"></span>
-          <span>Instagram energy. BookMyShow certainty.</span>
+      <div class="features-strip" data-animate="fade-up" data-delay="360">
+        <div class="feature-strip-item">
+          <strong>For audiences</strong>
+          <span>Find shows and book in seconds</span>
         </div>
-
-        <h1 class="headline" data-animate="headline">
-          <span class="headline__line">Turn Talent Into</span>
-          <span class="headline__line headline__line--accent">Live Performances</span>
-        </h1>
-
-        <p class="subhead" data-animate="fade-up" data-delay="140">
-          Discover. Book. Perform — In Real Life
-        </p>
-
-        <div class="hero__ctas" data-animate="fade-up" data-delay="220">
-          <a class="btn btn--primary btn--lg" href="/signup">
-            <span class="btn__glow" aria-hidden="true"></span>
-            Get started
-          </a>
-          <a class="btn btn--ghost btn--lg" href="/login">I already have an account</a>
+        <div class="feature-strip-item">
+          <strong>For creators</strong>
+          <span>Launch events and track sales</span>
         </div>
-
-        <div class="hero__stats" data-animate="fade-up" data-delay="320">
-          <div class="stat">
-            <div class="stat__num"><span data-count="2400">0</span>+</div>
-            <div class="stat__label">Verified performers</div>
-          </div>
-          <div class="stat">
-            <div class="stat__num">₹ <span data-count="35">0</span>L+</div>
-            <div class="stat__label">Paid to creators</div>
-          </div>
-          <div class="stat">
-            <div class="stat__num"><span data-count="18">0</span> cities</div>
-            <div class="stat__label">Active venues</div>
-          </div>
+        <div class="feature-strip-item">
+          <strong>For venues</strong>
+          <span>List spaces and manage bookings</span>
         </div>
       </div>
+    </div>
 
-      <div class="scroll-hint" aria-hidden="true">
-        <div class="scroll-hint__mouse"></div>
-        <div class="scroll-hint__label">Scroll</div>
+    <div class="scroll-hint" aria-hidden="true">
+      <div class="scroll-hint__mouse"></div>
+      <div class="scroll-hint__label">Scroll</div>
+    </div>
+  </section>
+
+  <section id="how" class="section section--how">
+    <div class="section__head" data-animate="fade-up">
+      <h2 class="h2">How it works</h2>
+      <p class="lead">Three steps from signup to your next live experience.</p>
+    </div>
+
+    <div class="steps">
+      <article class="step" data-animate="slide-left">
+        <div class="icon icon--purple" aria-hidden="true">✦</div>
+        <h3 class="h3">Create</h3>
+        <p class="p">Sign up as audience, creator, or venue — each with a tailored dashboard.</p>
+      </article>
+      <article class="step" data-animate="fade-up" data-delay="120">
+        <div class="icon icon--blue" aria-hidden="true">🎥</div>
+        <h3 class="h3">Discover</h3>
+        <p class="p">Browse featured and live shows, preview talent, and pick the right fit.</p>
+      </article>
+      <article class="step" data-animate="slide-right" data-delay="220">
+        <div class="icon icon--pink" aria-hidden="true">🎟</div>
+        <h3 class="h3">Go live</h3>
+        <p class="p">Book tickets, run events, and manage everything from one platform.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer section" data-animate="fade-up" data-delay="300">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">Eventra</span>
       </div>
-    </section>
-
-
-    <section id="how" class="section section--how">
-      <div class="section__head" data-animate="fade-up">
-        <h2 class="h2">How it works</h2>
-        <p class="lead">A simple flow that works for both audiences and performers.</p>
+      <div class="footer__links">
+        <a class="nav__link" href="#how">How it works</a>
+        <a class="nav__link" href="/featured-shows">Featured shows</a>
+        <a class="nav__link" href="/live-shows">Live shows</a>
+        <a class="nav__link" href="/testimonials">Testimonials</a>
       </div>
-
-      <div class="steps">
-        <article class="step" data-animate="slide-left">
-          <div class="icon icon--purple" aria-hidden="true">✦</div>
-          <h3 class="h3">Create</h3>
-          <p class="p">Make an account as an audience organizer or a performer.</p>
-        </article>
-        <article class="step" data-animate="fade-up" data-delay="120">
-          <div class="icon icon--blue" aria-hidden="true">🎥</div>
-          <h3 class="h3">Discover</h3>
-          <p class="p">Explore live shows and talent previews to find the right vibe.</p>
-        </article>
-        <article class="step" data-animate="slide-right" data-delay="220">
-          <div class="icon icon--pink" aria-hidden="true">🎟</div>
-          <h3 class="h3">Go live</h3>
-          <p class="p">Book, perform, and relive highlights through Spotly.</p>
-        </article>
-      </div>
-    </section>
-
-    <footer class="footer section" data-animate="fade-up" data-delay="300">
-      <div class="footer__inner">
-        <div class="footer__brand">
-          <span class="brand__mark" aria-hidden="true"></span>
-          <span class="brand__name">Spotly</span>
-        </div>
-        <div class="footer__links">
-          <a class="nav__link" href="#how">How it works</a>
-          <a class="nav__link" href="/featured-shows">Featured shows</a>
-          <a class="nav__link" href="/live-shows">Live shows</a>
-          <a class="nav__link" href="/testimonials">Testimonials</a>
-        </div>
-        <div class="footer__copy">© <span id="year"></span> Spotly</div>
-      </div>
-    </footer>
+      <div class="footer__copy">© <span id="year"></span> Eventra</div>
+    </div>
+  </footer>
 {% endblock %}

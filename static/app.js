@@ -117,4 +117,67 @@
     syncRoleFields();
   }
 
+  const showcase = document.querySelector('[data-phone-showcase]');
+  const feed = document.querySelector('[data-cards-feed]');
+  const feedCards = feed ? Array.from(feed.querySelectorAll('.card')) : [];
+
+  if (showcase && feedCards.length && !prefersReduced) {
+    requestAnimationFrame(() => {
+      for (const card of feedCards) card.classList.add('is-visible');
+    });
+
+    let active = 0;
+    const setActive = (idx) => {
+      active = idx;
+      for (let i = 0; i < feedCards.length; i++) {
+        feedCards[i].classList.toggle('is-active', i === idx);
+      }
+    };
+
+    setActive(0);
+    window.setInterval(() => setActive((active + 1) % feedCards.length), 3200);
+  } else if (feedCards.length) {
+    for (const card of feedCards) {
+      card.classList.add('is-visible');
+      if (card.classList.contains('is-active')) continue;
+    }
+    feedCards[0]?.classList.add('is-active');
+  }
+
+  const tiltCards = Array.from(document.querySelectorAll('[data-tilt]'));
+  tiltCards.forEach((card) => {
+    let frame = 0;
+    let pending = null;
+
+    const handleMouseMove = (e) => {
+      if (prefersReduced) return;
+      pending = e;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const ev = pending;
+        pending = null;
+        if (!ev) return;
+        const rect = card.getBoundingClientRect();
+        const x = (ev.clientX - rect.left) / rect.width;
+        const y = (ev.clientY - rect.top) / rect.height;
+        card.style.setProperty('--rx', `${(y - 0.5) * -10}deg`);
+        card.style.setProperty('--ry', `${(x - 0.5) * 10}deg`);
+      });
+    };
+
+    const handleMouseLeave = () => {
+      pending = null;
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+      card.style.removeProperty('--rx');
+      card.style.removeProperty('--ry');
+    };
+
+    card.addEventListener('mousemove', handleMouseMove);
+    card.addEventListener('mouseleave', handleMouseLeave);
+  });
+
 })();
